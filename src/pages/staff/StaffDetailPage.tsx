@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PhoneShell from '../../components/staff/PhoneShell';
 import StatusPill from '../../components/ui/StatusPill';
@@ -106,6 +106,8 @@ const StaffDetailPage: React.FC = () => {
   const { updateStatus, updatePhotoUrls } = useTickets();
 
   const [ticket, setLocalTicket] = useState<Ticket | null>(null);
+  // Sync fetched ticket into local state (local state allows optimistic status updates)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (fetchedTicket) setLocalTicket(fetchedTicket); }, [fetchedTicket]);
 
   const { technician } = useTechnician(ticket?.assigned_tech_id ?? '');
@@ -118,18 +120,18 @@ const StaffDetailPage: React.FC = () => {
   const [uploadingAfter, setUploadingAfter] = useState(false);
   const [uploadDone, setUploadDone] = useState(false);
 
-  const handleAfterFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAfterFiles = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files ?? []);
     setAfterFiles(prev => [...prev, ...selected]);
     setAfterPreviews(prev => [...prev, ...selected.map(f => URL.createObjectURL(f))]);
     setUploadDone(false);
-  };
+  }, []);
 
-  const removeAfterFile = (i: number) => {
+  const removeAfterFile = useCallback((i: number) => {
     URL.revokeObjectURL(afterPreviews[i]);
     setAfterFiles(prev => prev.filter((_, j) => j !== i));
     setAfterPreviews(prev => prev.filter((_, j) => j !== i));
-  };
+  }, [afterPreviews]);
 
   const handleUploadAfter = async () => {
     if (!ticket || afterFiles.length === 0) return;

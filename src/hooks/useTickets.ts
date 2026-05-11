@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Ticket, TicketStatus, EventAction } from '../types';
 
@@ -106,7 +106,7 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
     return result;
   };
 
-  const fetch = async () => {
+  const fetch = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase.from('tickets').select('*').order('created_at', { ascending: false });
@@ -122,15 +122,17 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
       setTickets(mergeCache(applyFilters(MOCK_TICKETS)));
     }
     setLoading(false);
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters?.assigned_tech_id, filters?.reporter_name]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetch();
     const channel = supabase.channel('tickets-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, fetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => { fetch(); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [filters?.assigned_tech_id, filters?.reporter_name]);
+  }, [fetch]);
 
   const createTicket = async (input: CreateTicketInput, actorName: string) => {
     // Generate ID — try Supabase RPC first, fall back to local counter
