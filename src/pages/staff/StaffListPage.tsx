@@ -131,8 +131,8 @@ const StaffListPage: React.FC = () => {
   const isMobile = useIsMobile();
   const isStaff = user?.role === 'staff';
 
-  const getTechName = (techId: string | null) =>
-    techId ? (technicians.find(t => t.id === techId)?.name ?? null) : null;
+  const getTechName = (techId: string | null): string | undefined =>
+    techId ? technicians.find(t => t.id === techId)?.name : undefined;
 
   const handleStatusChange = async (ticket: Ticket, newStatus: TicketStatus) => {
     await updateStatus({ ticketId: ticket.id, status: newStatus, actorName: user?.name ?? 'เจ้าหน้าที่' });
