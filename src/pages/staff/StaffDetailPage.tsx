@@ -4,13 +4,15 @@ import PhoneShell from '../../components/staff/PhoneShell';
 import StatusPill from '../../components/ui/StatusPill';
 import PriorityChip from '../../components/ui/PriorityChip';
 import Timeline from '../../components/ui/Timeline';
-import { CATEGORY_ICONS, MapPin, Clock, Phone, CheckCircle, X } from '../../components/ui/Icon';
+import { CATEGORY_ICONS, MapPin, Clock, Phone, CheckCircle, X, Camera } from '../../components/ui/Icon';
 import { useTicket, useTickets } from '../../hooks/useTickets';
 import { useTicketEvents } from '../../hooks/useTicketEvents';
 import { useTechnician } from '../../hooks/useTechnicians';
+import { useStorage } from '../../hooks/useStorage';
 import { useApp } from '../../context/AppContext';
 import type { Ticket, TicketStatus } from '../../types';
 import { CATEGORY_LABEL, CATEGORY_COLOR } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 /* ─── Photo Lightbox ─── */
 const PhotoLightbox: React.FC<{
@@ -107,9 +109,47 @@ const StaffDetailPage: React.FC = () => {
   useEffect(() => { if (fetchedTicket) setLocalTicket(fetchedTicket); }, [fetchedTicket]);
 
   const { technician } = useTechnician(ticket?.assigned_tech_id ?? '');
+  const { uploadPhotos, uploading } = useStorage();
+  const { updatePhotoUrls } = useTickets();
   const [confirmDone, setConfirmDone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [afterFiles, setAfterFiles] = useState<File[]>([]);
+  const [afterPreviews, setAfterPreviews] = useState<string[]>([]);
+  const [uploadingAfter, setUploadingAfter] = useState(false);
+  const [uploadDone, setUploadDone] = useState(false);
+
+  const handleAfterFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? []);
+    setAfterFiles(prev => [...prev, ...selected]);
+    setAfterPreviews(prev => [...prev, ...selected.map(f => URL.createObjectURL(f))]);
+    setUploadDone(false);
+  };
+
+  const removeAfterFile = (i: number) => {
+    URL.revokeObjectURL(afterPreviews[i]);
+    setAfterFiles(prev => prev.filter((_, j) => j !== i));
+    setAfterPreviews(prev => prev.filter((_, j) => j !== i));
+  };
+
+  const handleUploadAfter = async () => {
+    if (!ticket || afterFiles.length === 0) return;
+    setUploadingAfter(true);
+    try {
+      const urls = await uploadPhotos(afterFiles, ticket.id);
+      if (urls.length > 0) {
+        const merged = [...ticket.photo_urls, ...urls];
+        await supabase.from('tickets').update({ photo_urls: merged }).eq('id', ticket.id);
+        updatePhotoUrls(ticket.id, merged);
+        setLocalTicket(prev => prev ? { ...prev, photo_urls: merged } : prev);
+        setAfterFiles([]);
+        afterPreviews.forEach(URL.revokeObjectURL);
+        setAfterPreviews([]);
+        setUploadDone(true);
+      }
+    } catch { /* storage unavailable */ }
+    setUploadingAfter(false);
+  };
 
   if (loading) return <PhoneShell title="กำลังโหลด..." showBack><div style={{ padding: 24, textAlign: 'center', color: 'var(--ink-4)' }}>กำลังโหลด...</div></PhoneShell>;
   if (!ticket) return <PhoneShell title="ไม่พบข้อมูล" showBack><div style={{ padding: 24 }}>ไม่พบคำขอนี้</div></PhoneShell>;
@@ -245,6 +285,62 @@ const StaffDetailPage: React.FC = () => {
       {ticket.status === 'done' && ticket.rating && (
         <div className="dn-card" style={{ padding: 16, textAlign: 'center', background: 'var(--ok-soft)', border: '1px solid var(--ok)', marginBottom: 8 }}>
           <div style={{ fontSize: 13, color: '#1B6F4D', fontWeight: 500 }}>⭐ คะแนนของคุณ: {ticket.rating}/5</div>
+        </div>
+      )}
+
+      {/* ── อัพรูปหลังซ่อม ── */}
+      {ticket.status === 'done' && (
+        <div className="dn-card" style={{ padding: 16, marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 12 }}>
+            📷 รูปหลังซ่อมเสร็จ
+          </div>
+
+          {/* Preview files ที่เลือก */}
+          {afterPreviews.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              {afterPreviews.map((url, i) => (
+                <div key={i} style={{ position: 'relative', width: 72, height: 72, borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+                  <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button type="button" onClick={() => removeAfterFile(i)} style={{
+                    position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%',
+                    background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <X size={11} stroke="#fff" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {/* เลือกรูป */}
+            <label style={{
+              flex: 1, height: 40, borderRadius: 'var(--r-md)', border: '1.5px dashed var(--border-strong)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              cursor: 'pointer', background: 'var(--surface-2)', fontSize: 13, color: 'var(--ink-3)',
+            }}>
+              <input type="file" accept="image/*" multiple onChange={handleAfterFiles} style={{ display: 'none' }} />
+              <Camera size={15} stroke="var(--ink-4)" />
+              เลือกรูป
+            </label>
+
+            {/* อัพโหลด */}
+            {afterFiles.length > 0 && (
+              <button onClick={handleUploadAfter} disabled={uploadingAfter || uploading}
+                style={{
+                  flex: 1, height: 40, borderRadius: 'var(--r-md)', border: 'none',
+                  background: 'var(--ok)', color: '#fff', fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                {uploadingAfter ? 'กำลังอัพโหลด...' : `อัพโหลด (${afterFiles.length} รูป)`}
+              </button>
+            )}
+          </div>
+
+          {uploadDone && (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ok)', fontWeight: 500 }}>✅ อัพโหลดสำเร็จ</div>
+          )}
         </div>
       )}
 
