@@ -12,6 +12,47 @@ import { useApp } from '../../context/AppContext';
 import type { Ticket, TicketStatus } from '../../types';
 import { CATEGORY_LABEL, CATEGORY_COLOR } from '../../types';
 
+/* ─── Photo Lightbox ─── */
+const PhotoLightbox: React.FC<{
+  urls: string[];
+  index: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+}> = ({ urls, index, onClose, onPrev, onNext }) => (
+  <div
+    style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    onClick={onClose}
+  >
+    {/* Close */}
+    <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <X size={20} stroke="#fff" />
+    </button>
+
+    {/* Counter */}
+    <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+      {index + 1} / {urls.length}
+    </div>
+
+    {/* Prev */}
+    {urls.length > 1 && (
+      <button onClick={e => { e.stopPropagation(); onPrev(); }} style={{ position: 'absolute', left: 16, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 44, height: 44, cursor: 'pointer', color: '#fff', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+    )}
+
+    {/* Image */}
+    <img
+      src={urls[index]}
+      onClick={e => e.stopPropagation()}
+      style={{ maxWidth: '90vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+    />
+
+    {/* Next */}
+    {urls.length > 1 && (
+      <button onClick={e => { e.stopPropagation(); onNext(); }} style={{ position: 'absolute', right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 44, height: 44, cursor: 'pointer', color: '#fff', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+    )}
+  </div>
+);
+
 const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
     <span style={{ fontSize: 13, color: 'var(--ink-3)', flexShrink: 0 }}>{label}</span>
@@ -68,6 +109,7 @@ const StaffDetailPage: React.FC = () => {
   const { technician } = useTechnician(ticket?.assigned_tech_id ?? '');
   const [confirmDone, setConfirmDone] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
   if (loading) return <PhoneShell title="กำลังโหลด..." showBack><div style={{ padding: 24, textAlign: 'center', color: 'var(--ink-4)' }}>กำลังโหลด...</div></PhoneShell>;
   if (!ticket) return <PhoneShell title="ไม่พบข้อมูล" showBack><div style={{ padding: 24 }}>ไม่พบคำขอนี้</div></PhoneShell>;
@@ -141,10 +183,25 @@ const StaffDetailPage: React.FC = () => {
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 8 }}>ภาพถ่าย ({ticket.photo_urls.length})</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {ticket.photo_urls.map((url, i) => (
-              <img key={i} src={url} style={{ width: 80, height: 80, borderRadius: 'var(--r-md)', objectFit: 'cover', border: '1px solid var(--border)' }} />
+              <div key={i} onClick={() => setLightboxIdx(i)} style={{ cursor: 'zoom-in', borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--border)', transition: 'opacity .15s' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+                <img src={url} style={{ width: 80, height: 80, objectFit: 'cover', display: 'block' }} />
+              </div>
             ))}
           </div>
         </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxIdx !== null && (
+        <PhotoLightbox
+          urls={ticket.photo_urls}
+          index={lightboxIdx}
+          onClose={() => setLightboxIdx(null)}
+          onPrev={() => setLightboxIdx(i => (i! - 1 + ticket.photo_urls.length) % ticket.photo_urls.length)}
+          onNext={() => setLightboxIdx(i => (i! + 1) % ticket.photo_urls.length)}
+        />
       )}
 
       {/* Timeline */}
