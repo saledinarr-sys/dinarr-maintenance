@@ -122,27 +122,6 @@ const StaffListPage: React.FC = () => {
     return (
       <PhoneShell title="คำขอ" noPad>
         <div style={{ padding: '20px 28px', maxWidth: 1100, margin: '0 auto' }}>
-          {/* Stats row */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-            {COLUMNS.map(c => {
-              const count = tickets.filter(t => t.status === c.key).length;
-              return (
-                <div key={c.key} style={{
-                  flex: 1, padding: '10px 14px', borderRadius: 'var(--r-md)',
-                  background: c.bg, border: `1px solid ${c.border}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: c.color }}>{c.label}</span>
-                  <span style={{
-                    fontSize: 18, fontWeight: 800, color: c.color,
-                    background: '#fff', width: 32, height: 32, borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{count}</span>
-                </div>
-              );
-            })}
-          </div>
-
           {/* 3 columns */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, alignItems: 'start' }}>
             {COLUMNS.map(col => {
