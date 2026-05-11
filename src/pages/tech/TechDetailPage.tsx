@@ -3,10 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import PhoneShell from '../../components/staff/PhoneShell';
 import StatusPill from '../../components/ui/StatusPill';
 import PriorityChip from '../../components/ui/PriorityChip';
-import Timeline from '../../components/ui/Timeline';
 import { CATEGORY_ICONS, MapPin, Clock, Phone, Edit } from '../../components/ui/Icon';
 import { useTicket } from '../../hooks/useTickets';
-import { useTicketEvents } from '../../hooks/useTicketEvents';
 import { CATEGORY_LABEL, CATEGORY_COLOR } from '../../types';
 
 const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -20,7 +18,6 @@ const TechDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { ticket, loading } = useTicket(id ?? '');
-  const { events } = useTicketEvents(id ?? '');
 
   if (loading) return <PhoneShell title="กำลังโหลด..." showBack role="tech"><div style={{ padding: 24, textAlign: 'center', color: 'var(--ink-4)' }}>กำลังโหลด...</div></PhoneShell>;
   if (!ticket) return <PhoneShell title="ไม่พบข้อมูล" showBack role="tech"><div style={{ padding: 24 }}>ไม่พบงานนี้</div></PhoneShell>;
@@ -80,14 +77,7 @@ const TechDetailPage: React.FC = () => {
         </div>
       )}
 
-      {events.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 12 }}>ประวัติการดำเนินการ</div>
-          <Timeline events={events} />
-        </div>
-      )}
-
-      {ticket.status !== 'done' && (
+{ticket.status !== 'done' && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
           <a href={`tel:${ticket.reporter_name}`} className="btn btn-ghost" style={{ flex: 1, textDecoration: 'none' }}>
             <Phone size={16} />
