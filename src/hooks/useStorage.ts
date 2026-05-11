@@ -11,10 +11,12 @@ export function useStorage() {
       const ext = file.name.split('.').pop();
       const path = `${ticketId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error } = await supabase.storage.from('ticket-photos').upload(path, file);
-      if (!error) {
-        const { data } = supabase.storage.from('ticket-photos').getPublicUrl(path);
-        urls.push(data.publicUrl);
+      if (error) {
+        console.error('[Storage] upload failed:', error.message);
+        throw new Error(error.message);
       }
+      const { data } = supabase.storage.from('ticket-photos').getPublicUrl(path);
+      urls.push(data.publicUrl);
     }
     setUploading(false);
     return urls;

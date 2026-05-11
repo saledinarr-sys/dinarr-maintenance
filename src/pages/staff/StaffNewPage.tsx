@@ -37,7 +37,7 @@ const StaffNewPage: React.FC = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { user } = useApp();
-  const { createTicket } = useTickets();
+  const { createTicket, updatePhotoUrls } = useTickets();
   const { uploadPhotos, uploading } = useStorage();
 
   const [name, setName] = useState(user?.name ?? '');
@@ -88,10 +88,13 @@ const StaffNewPage: React.FC = () => {
         try {
           const urls = await uploadPhotos(files, newTicket.id);
           if (urls.length > 0) {
-            const { supabase } = await import('../../lib/supabase');
-            await supabase.from('tickets').update({ photo_urls: urls }).eq('id', newTicket.id);
+            // Update Supabase
+            const { supabase: sb } = await import('../../lib/supabase');
+            await sb.from('tickets').update({ photo_urls: urls }).eq('id', newTicket.id);
+            // Update local cache so photos show immediately on detail page
+            updatePhotoUrls(newTicket.id, urls);
           }
-        } catch { /* storage unavailable */ }
+        } catch { /* storage unavailable — ticket still saved without photos */ }
       }
 
       navigate('/staff/list');

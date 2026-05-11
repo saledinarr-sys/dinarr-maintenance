@@ -200,7 +200,26 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
     await supabase.from('tickets').update({ rating }).eq('id', ticketId);
   };
 
-  return { tickets, loading, error, createTicket, updateStatus, updateRating, refetch: fetch };
+  const updatePhotoUrls = (ticketId: string, urls: string[]) => {
+    // Patch local cache so detail page shows photos immediately
+    const cached = localTicketCache.get(ticketId);
+    if (cached) {
+      const patched = { ...cached, photo_urls: urls };
+      localTicketCache.set(ticketId, patched);
+      setTickets(prev => prev.map(t => t.id === ticketId ? patched : t));
+    } else {
+      // Ticket was saved to Supabase (not in cache) — add a cache entry with photos
+      setTickets(prev => {
+        const found = prev.find(t => t.id === ticketId);
+        if (!found) return prev;
+        const patched = { ...found, photo_urls: urls };
+        localTicketCache.set(ticketId, patched);
+        return prev.map(t => t.id === ticketId ? patched : t);
+      });
+    }
+  };
+
+  return { tickets, loading, error, createTicket, updateStatus, updateRating, updatePhotoUrls, refetch: fetch };
 }
 
 export function useTicket(ticketId: string) {
