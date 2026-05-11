@@ -26,6 +26,20 @@ interface UpdateStatusInput {
 // so both useTickets and useTicket can find them
 const localTicketCache = new Map<string, Ticket>();
 
+// Normalize raw Supabase row → safe Ticket (ensure arrays/strings are never null)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalize = (t: any): Ticket => ({
+  ...t,
+  photo_urls: Array.isArray(t.photo_urls) ? t.photo_urls : [],
+  description: t.description ?? '',
+  rating: t.rating ?? null,
+  assigned_tech_id: t.assigned_tech_id ?? null,
+  reporter_name: t.reporter_name ?? '',
+  reporter_role: t.reporter_role ?? '',
+  where_loc: t.where_loc ?? '',
+  title: t.title ?? '',
+});
+
 const MOCK_TICKETS: Ticket[] = [
   {
     id: 'DN-2446', category_id: 'electric', status: 'new', priority: 'high',
@@ -102,7 +116,7 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
       if (error || !data || data.length === 0) {
         setTickets(mergeCache(applyFilters(MOCK_TICKETS)));
       } else {
-        setTickets(mergeCache(data));
+        setTickets(mergeCache(data.map(normalize)));
       }
     } catch {
       setTickets(mergeCache(applyFilters(MOCK_TICKETS)));
@@ -233,12 +247,11 @@ export function useTicket(ticketId: string) {
       try {
         const { data, error } = await supabase.from('tickets').select('*').eq('id', ticketId).single();
         if (error || !data) {
-          // Cache takes priority (has latest status), then mock
           const mock = MOCK_TICKETS.find(t => t.id === ticketId) ?? null;
           setTicket(localTicketCache.get(ticketId) ?? mock);
         } else {
-          // Even when Supabase returns data, override with cache if it's newer
-          setTicket(localTicketCache.get(ticketId) ?? data);
+          const safe = normalize(data);
+          setTicket(localTicketCache.get(ticketId) ?? safe);
         }
       } catch {
         const mock = MOCK_TICKETS.find(t => t.id === ticketId) ?? null;
@@ -249,7 +262,7 @@ export function useTicket(ticketId: string) {
     fetch();
     const channel = supabase.channel(`ticket-${ticketId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets', filter: `id=eq.${ticketId}` }, (payload) => {
-        setTicket(payload.new as Ticket);
+        setTicket(normalize(payload.new));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
