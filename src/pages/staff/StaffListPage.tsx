@@ -4,7 +4,8 @@ import PhoneShell from '../../components/staff/PhoneShell';
 import { useTickets } from '../../hooks/useTickets';
 import { useApp } from '../../context/AppContext';
 import PriorityChip from '../../components/ui/PriorityChip';
-import { CATEGORY_ICONS, Clock } from '../../components/ui/Icon';
+import { CATEGORY_ICONS, Clock, User } from '../../components/ui/Icon';
+import { useTechnicians } from '../../hooks/useTechnicians';
 import { CATEGORY_COLOR, CATEGORY_LABEL } from '../../types';
 import type { TicketStatus, Ticket } from '../../types';
 
@@ -37,9 +38,10 @@ const KanbanCard: React.FC<{
   ticket: Ticket;
   colKey: KanbanCol;
   isStaff: boolean;
+  techName?: string;
   onNavigate: () => void;
   onStatusChange: (t: Ticket, s: TicketStatus) => void;
-}> = ({ ticket, colKey, isStaff, onNavigate, onStatusChange }) => {
+}> = ({ ticket, colKey, isStaff, techName, onNavigate, onStatusChange }) => {
   const CatIcon = CATEGORY_ICONS[ticket.category_id];
   const catColor = CATEGORY_COLOR[ticket.category_id];
   const sla = ticket.status !== 'done' ? slaRemaining(ticket.created_at, ticket.sla_hours) : null;
@@ -61,6 +63,21 @@ const KanbanCard: React.FC<{
         {/* Title */}
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8, lineHeight: 1.4 }}>
           {ticket.title}
+        </div>
+
+        {/* Reporter + Tech */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--ink-4)' }}>
+            <User size={10} stroke="var(--ink-4)" />
+            <span>{ticket.reporter_name}</span>
+            {ticket.reporter_role && <span style={{ color: 'var(--ink-5, var(--ink-4))' }}>· {ticket.reporter_role}</span>}
+          </div>
+          {techName && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--brand)' }}>
+              <span>🔧</span>
+              <span style={{ fontWeight: 600 }}>{techName}</span>
+            </div>
+          )}
         </div>
 
         {/* Category + SLA */}
@@ -109,9 +126,13 @@ const StaffListPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useApp();
   const { tickets, loading, updateStatus } = useTickets();
+  const { technicians } = useTechnicians();
   const [activeCol, setActiveCol] = useState<KanbanCol>('new');
   const isMobile = useIsMobile();
   const isStaff = user?.role === 'staff';
+
+  const getTechName = (techId: string | null) =>
+    techId ? (technicians.find(t => t.id === techId)?.name ?? null) : null;
 
   const handleStatusChange = async (ticket: Ticket, newStatus: TicketStatus) => {
     await updateStatus({ ticketId: ticket.id, status: newStatus, actorName: user?.name ?? 'เจ้าหน้าที่' });
@@ -156,6 +177,7 @@ const StaffListPage: React.FC = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {colTickets.map(t => (
                         <KanbanCard key={t.id} ticket={t} colKey={col.key} isStaff={isStaff}
+                          techName={getTechName(t.assigned_tech_id)}
                           onNavigate={() => navigate(`/staff/ticket/${t.id}`)}
                           onStatusChange={handleStatusChange} />
                       ))}
@@ -216,6 +238,7 @@ const StaffListPage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {colTickets.map(t => (
               <KanbanCard key={t.id} ticket={t} colKey={activeCol} isStaff={isStaff}
+                techName={getTechName(t.assigned_tech_id)}
                 onNavigate={() => navigate(`/staff/ticket/${t.id}`)}
                 onStatusChange={handleStatusChange} />
             ))}
