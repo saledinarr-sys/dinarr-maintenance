@@ -3,10 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import PhoneShell from '../../components/staff/PhoneShell';
 import StatusPill from '../../components/ui/StatusPill';
 import PriorityChip from '../../components/ui/PriorityChip';
-import Timeline from '../../components/ui/Timeline';
 import { CATEGORY_ICONS, MapPin, Clock, Phone, CheckCircle, X, Camera } from '../../components/ui/Icon';
 import { useTicket, useTickets } from '../../hooks/useTickets';
-import { useTicketEvents } from '../../hooks/useTicketEvents';
 import { useTechnician } from '../../hooks/useTechnicians';
 import { useStorage } from '../../hooks/useStorage';
 import { useApp } from '../../context/AppContext';
@@ -102,7 +100,6 @@ const StaffDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useApp();
   const { ticket: fetchedTicket, loading } = useTicket(id ?? '');
-  const { events } = useTicketEvents(id ?? '');
   const { updateStatus, updatePhotoUrls } = useTickets();
 
   const [ticket, setLocalTicket] = useState<Ticket | null>(null);
@@ -243,14 +240,6 @@ const StaffDetailPage: React.FC = () => {
           onPrev={() => setLightboxIdx(i => (i! - 1 + ticket.photo_urls.length) % ticket.photo_urls.length)}
           onNext={() => setLightboxIdx(i => (i! + 1) % ticket.photo_urls.length)}
         />
-      )}
-
-      {/* Timeline */}
-      {events.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 12 }}>ประวัติการดำเนินการ</div>
-          <Timeline events={events} />
-        </div>
       )}
 
       {/* ── STAFF ACTIONS ── */}
