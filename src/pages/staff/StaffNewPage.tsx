@@ -86,16 +86,18 @@ const StaffNewPage: React.FC = () => {
     if (!cat || !title.trim() || !location.trim()) return;
     setSubmitting(true);
     try {
+      const reporterName = name.trim() || user?.name || 'ไม่ระบุชื่อ';
+      const reporterRole = dept.trim() || user?.department || '';
       const newTicket = await createTicket({
         category_id: cat,
         priority,
         title: title.trim(),
         where_loc: location.trim(),
-        reporter_name: name.trim() || (user?.name ?? 'ไม่ระบุ'),
-        reporter_role: dept.trim() || (user?.department ?? 'ไม่ระบุ'),
+        reporter_name: reporterName,
+        reporter_role: reporterRole,
         sla_hours: SLA[priority],
         description: desc.trim(),
-      }, name.trim() || (user?.name ?? 'ไม่ระบุ'));
+      }, reporterName);
 
       if (files.length > 0) {
         try {

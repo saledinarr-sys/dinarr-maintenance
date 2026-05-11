@@ -10,7 +10,7 @@ type AppAction =
   | { type: 'SET_USER'; payload: AppUser }
   | { type: 'LOGOUT' };
 
-const defaultUser: AppUser = { role: 'staff', name: 'พนักงาน' };
+const defaultUser: AppUser = { role: 'staff', name: '' };
 const initialState: AppState = { user: defaultUser };
 
 function reducer(state: AppState, action: AppAction): AppState {
