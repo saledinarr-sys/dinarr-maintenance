@@ -43,6 +43,7 @@ const StaffRatePage: React.FC = () => {
 
   return (
     <PhoneShell title="ประเมินการซ่อม" showBack>
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* Success banner */}
       <div style={{ textAlign: 'center', padding: '24px 0', marginBottom: 24 }}>
         <div style={{
@@ -119,6 +120,7 @@ const StaffRatePage: React.FC = () => {
         onClick={handleSubmit} disabled={!score || submitting}>
         {submitting ? 'กำลังส่ง...' : 'ส่งการประเมิน'}
       </button>
+      </div>
     </PhoneShell>
   );
 };

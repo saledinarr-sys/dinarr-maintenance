@@ -89,6 +89,7 @@ const StaffDetailPage: React.FC = () => {
 
   return (
     <PhoneShell title={ticket.id} showBack>
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* Status + Priority */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <StatusPill status={ticket.status} />
@@ -211,6 +212,7 @@ const StaffDetailPage: React.FC = () => {
       {confirmDone && (
         <ConfirmDoneDialog saving={saving} onConfirm={() => applyStatus('done')} onClose={() => setConfirmDone(false)} />
       )}
+      </div>
     </PhoneShell>
   );
 };

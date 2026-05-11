@@ -26,6 +26,7 @@ const StaffHomePage: React.FC = () => {
 
   return (
     <PhoneShell showBell>
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* Greeting */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink-1)' }}>
@@ -112,7 +113,7 @@ const StaffHomePage: React.FC = () => {
           </button>
         </div>
       )}
-
+      </div>
     </PhoneShell>
   );
 };

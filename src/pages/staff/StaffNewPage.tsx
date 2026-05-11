@@ -11,8 +11,7 @@ import { CATEGORY_LABEL, CATEGORY_COLOR, PRIORITY_LABEL } from '../../types';
 
 const CATS: CategoryId[] = ['electric', 'plumb', 'aircon', 'medical', 'it', 'furn'];
 const PRIOS: TicketPriority[] = ['low', 'mid', 'high', 'crit'];
-
-const SLA: Record<TicketPriority, number> = { low: 24, mid: 8, high: 4, crit: 2 };
+const SLA: Record<TicketPriority, number> = { low: 48, mid: 24, high: 12, crit: 2 };
 
 const PRIO_COLOR: Record<TicketPriority, string> = {
   low: 'var(--ink-3)',
@@ -22,13 +21,13 @@ const PRIO_COLOR: Record<TicketPriority, string> = {
 };
 
 const Section: React.FC<{ num: number; title: string; children: React.ReactNode }> = ({ num, title, children }) => (
-  <div style={{ marginBottom: 20 }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+  <div style={{ marginBottom: 24 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
       <div style={{
-        width: 24, height: 24, borderRadius: '50%', background: 'var(--brand)', color: '#fff',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0,
+        width: 26, height: 26, borderRadius: '50%', background: 'var(--brand)', color: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0,
       }}>{num}</div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>{title}</div>
+      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink-1)' }}>{title}</div>
     </div>
     {children}
   </div>
@@ -85,7 +84,6 @@ const StaffNewPage: React.FC = () => {
         description: desc.trim(),
       }, name.trim() || (user?.name ?? 'ไม่ระบุ'));
 
-      // Upload photos best-effort — never block navigation
       if (files.length > 0) {
         try {
           const urls = await uploadPhotos(files, newTicket.id);
@@ -93,11 +91,10 @@ const StaffNewPage: React.FC = () => {
             const { supabase } = await import('../../lib/supabase');
             await supabase.from('tickets').update({ photo_urls: urls }).eq('id', newTicket.id);
           }
-        } catch { /* storage unavailable — skip photo upload */ }
+        } catch { /* storage unavailable */ }
       }
 
-      // Always navigate to the new ticket's detail page
-      navigate(`/staff/ticket/${newTicket.id}`);
+      navigate('/staff/list');
     } catch {
       alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
       setSubmitting(false);
@@ -107,122 +104,140 @@ const StaffNewPage: React.FC = () => {
   return (
     <PhoneShell title="แจ้งซ่อมใหม่" showBack>
       <form onSubmit={handleSubmit}>
-        {/* Section 1: Reporter */}
-        <Section num={1} title="ข้อมูลผู้แจ้ง">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="ชื่อ-นามสกุล *" required />
-            <input className="input" value={dept} onChange={e => setDept(e.target.value)} placeholder="แผนก / ตำแหน่ง" />
-            <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="เบอร์โทรศัพท์" type="tel" />
-          </div>
-        </Section>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
 
-        {/* Section 2: Category */}
-        <Section num={2} title="ประเภทงาน *">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {CATS.map(c => {
-              const Icon = CATEGORY_ICONS[c];
-              const selected = cat === c;
-              return (
-                <button key={c} type="button" onClick={() => setCat(c)}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                    padding: '12px 6px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                    background: selected ? CATEGORY_COLOR[c] + '18' : 'var(--surface)',
-                    border: `2px solid ${selected ? CATEGORY_COLOR[c] : 'var(--border)'}`,
-                    fontFamily: 'inherit', transition: 'all .15s',
-                  }}>
-                  <Icon size={20} stroke={selected ? CATEGORY_COLOR[c] : 'var(--ink-3)'} />
-                  <span style={{ fontSize: 11, fontWeight: 500, color: selected ? CATEGORY_COLOR[c] : 'var(--ink-3)', textAlign: 'center', lineHeight: 1.2 }}>
-                    {CATEGORY_LABEL[c]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Section>
+            {/* Left column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div className="dn-card" style={{ padding: '24px 24px 8px' }}>
+                {/* Section 1 */}
+                <Section num={1} title="ข้อมูลผู้แจ้ง">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="ชื่อ-นามสกุล *" required />
+                    <input className="input" value={dept} onChange={e => setDept(e.target.value)} placeholder="แผนก / ตำแหน่ง" />
+                    <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="เบอร์โทรศัพท์" type="tel" />
+                  </div>
+                </Section>
 
-        {/* Section 3: Title */}
-        <Section num={3} title="หัวข้อปัญหา *">
-          <input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="เช่น แอร์ห้อง ICU ไม่เย็น" required />
-        </Section>
+                {/* Section 2 */}
+                <Section num={2} title="ประเภทงาน *">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {CATS.map(c => {
+                      const Icon = CATEGORY_ICONS[c];
+                      const selected = cat === c;
+                      return (
+                        <button key={c} type="button" onClick={() => setCat(c)} style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                          padding: '14px 6px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+                          background: selected ? CATEGORY_COLOR[c] + '18' : 'var(--surface-2)',
+                          border: `2px solid ${selected ? CATEGORY_COLOR[c] : 'var(--border)'}`,
+                          fontFamily: 'inherit', transition: 'all .15s',
+                        }}>
+                          <Icon size={22} stroke={selected ? CATEGORY_COLOR[c] : 'var(--ink-3)'} />
+                          <span style={{ fontSize: 11, fontWeight: 500, color: selected ? CATEGORY_COLOR[c] : 'var(--ink-3)', textAlign: 'center', lineHeight: 1.3 }}>
+                            {CATEGORY_LABEL[c]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Section>
 
-        {/* Section 4: Description */}
-        <Section num={4} title="รายละเอียด">
-          <textarea className="input" value={desc} onChange={e => setDesc(e.target.value)} placeholder="อธิบายปัญหาเพิ่มเติม..." rows={3} />
-        </Section>
+                {/* Section 3 */}
+                <Section num={3} title="หัวข้อปัญหา *">
+                  <input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="เช่น แอร์ห้อง ICU ไม่เย็น" required />
+                </Section>
 
-        {/* Section 5: Location */}
-        <Section num={5} title="สถานที่ *">
-          <div style={{ position: 'relative' }}>
-            <MapPin size={16} style={{ position: 'absolute', left: 14, top: 15, color: 'var(--ink-3)' } as React.CSSProperties} />
-            <input className="input" value={location} onChange={e => setLocation(e.target.value)}
-              placeholder="เช่น อาคาร A · ชั้น 2 · ห้องตรวจสัตว์เล็ก" required
-              style={{ paddingLeft: 38 }} />
-          </div>
-        </Section>
-
-        {/* Section 6: Priority */}
-        <Section num={6} title="ระดับความเร่งด่วน">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {PRIOS.map(p => (
-              <label key={p} style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-                borderRadius: 'var(--r-md)', border: `2px solid ${priority === p ? PRIO_COLOR[p] : 'var(--border)'}`,
-                background: priority === p ? PRIO_COLOR[p] + '10' : 'var(--surface)',
-                cursor: 'pointer', transition: 'all .15s',
-              }}>
-                <input type="radio" name="priority" value={p} checked={priority === p} onChange={() => setPriority(p)} style={{ display: 'none' }} />
-                <div style={{ display: 'flex', gap: 2 }}>
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} style={{
-                      width: 4, height: 14, borderRadius: 2,
-                      background: i <= (p === 'low' ? 1 : p === 'mid' ? 2 : p === 'high' ? 3 : 4)
-                        ? PRIO_COLOR[p] : 'var(--border-strong)',
-                    }} />
-                  ))}
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: priority === p ? PRIO_COLOR[p] : 'var(--ink-2)' }}>{PRIORITY_LABEL[p]}</div>
-                  <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>SLA {SLA[p]} ชั่วโมง</div>
-                </div>
-              </label>
-            ))}
-          </div>
-        </Section>
-
-        {/* Section 7: Photos */}
-        <Section num={7} title="ภาพถ่าย (ถ้ามี)">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {previews.map((url, i) => (
-              <div key={i} style={{ position: 'relative', width: 72, height: 72, borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
-                <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <button type="button" onClick={() => removeFile(i)}
-                  style={{
-                    position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%',
-                    background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-                  }}>
-                  <X size={12} stroke="#fff" />
-                </button>
+                {/* Section 4 */}
+                <Section num={4} title="รายละเอียด">
+                  <textarea className="input" value={desc} onChange={e => setDesc(e.target.value)}
+                    placeholder="อธิบายปัญหาเพิ่มเติม..." rows={4} />
+                </Section>
               </div>
-            ))}
-            <label style={{
-              width: 72, height: 72, borderRadius: 'var(--r-md)', border: '1.5px dashed var(--border-strong)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', background: 'var(--surface-2)', gap: 4,
-            }}>
-              <input type="file" accept="image/*" multiple onChange={handleFiles} style={{ display: 'none' }} />
-              <Camera size={18} stroke="var(--ink-4)" />
-              <span style={{ fontSize: 10, color: 'var(--ink-4)' }}>เพิ่มรูป</span>
-            </label>
-          </div>
-        </Section>
+            </div>
 
-        <button type="submit" className="btn btn-primary"
-          style={{ width: '100%', height: 52, fontSize: 16, fontWeight: 600, borderRadius: 'var(--r-lg)', marginBottom: 8 }}
-          disabled={submitting || uploading || !cat || !title.trim() || !location.trim()}>
-          {submitting || uploading ? 'กำลังส่ง...' : 'ส่งคำขอแจ้งซ่อม'}
-        </button>
+            {/* Right column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="dn-card" style={{ padding: '24px 24px 8px' }}>
+                {/* Section 5 */}
+                <Section num={5} title="สถานที่ *">
+                  <div style={{ position: 'relative' }}>
+                    <MapPin size={16} style={{ position: 'absolute', left: 14, top: 15, color: 'var(--ink-3)' } as React.CSSProperties} />
+                    <input className="input" value={location} onChange={e => setLocation(e.target.value)}
+                      placeholder="เช่น อาคาร A · ชั้น 2 · ห้องตรวจ" required style={{ paddingLeft: 38 }} />
+                  </div>
+                </Section>
+
+                {/* Section 6 */}
+                <Section num={6} title="ระดับความเร่งด่วน">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {PRIOS.map(p => (
+                      <label key={p} style={{
+                        display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
+                        borderRadius: 'var(--r-md)', border: `2px solid ${priority === p ? PRIO_COLOR[p] : 'var(--border)'}`,
+                        background: priority === p ? PRIO_COLOR[p] + '10' : 'var(--surface-2)',
+                        cursor: 'pointer', transition: 'all .15s',
+                      }}>
+                        <input type="radio" name="priority" value={p} checked={priority === p}
+                          onChange={() => setPriority(p)} style={{ display: 'none' }} />
+                        <div style={{ display: 'flex', gap: 3 }}>
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i} style={{
+                              width: 4, height: 16, borderRadius: 2,
+                              background: i <= (p === 'low' ? 1 : p === 'mid' ? 2 : p === 'high' ? 3 : 4)
+                                ? PRIO_COLOR[p] : 'var(--border-strong)',
+                            }} />
+                          ))}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: priority === p ? PRIO_COLOR[p] : 'var(--ink-2)' }}>
+                            {PRIORITY_LABEL[p]}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>SLA {SLA[p]} ชั่วโมง</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </Section>
+
+                {/* Section 7 */}
+                <Section num={7} title="ภาพถ่าย (ถ้ามี)">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {previews.map((url, i) => (
+                      <div key={i} style={{ position: 'relative', width: 80, height: 80, borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+                        <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button type="button" onClick={() => removeFile(i)} style={{
+                          position: 'absolute', top: 3, right: 3, width: 22, height: 22, borderRadius: '50%',
+                          background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <X size={12} stroke="#fff" />
+                        </button>
+                      </div>
+                    ))}
+                    <label style={{
+                      width: 80, height: 80, borderRadius: 'var(--r-md)', border: '1.5px dashed var(--border-strong)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', background: 'var(--surface-2)', gap: 4,
+                    }}>
+                      <input type="file" accept="image/*" multiple onChange={handleFiles} style={{ display: 'none' }} />
+                      <Camera size={20} stroke="var(--ink-4)" />
+                      <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>เพิ่มรูป</span>
+                    </label>
+                  </div>
+                </Section>
+              </div>
+
+              {/* Submit */}
+              <button type="submit" className="btn btn-primary"
+                style={{ width: '100%', height: 52, fontSize: 16, fontWeight: 600, borderRadius: 'var(--r-lg)' }}
+                disabled={submitting || uploading || !cat || !title.trim() || !location.trim()}>
+                {submitting || uploading ? 'กำลังส่ง...' : 'ส่งคำขอแจ้งซ่อม'}
+              </button>
+            </div>
+
+          </div>
+        </div>
       </form>
     </PhoneShell>
   );

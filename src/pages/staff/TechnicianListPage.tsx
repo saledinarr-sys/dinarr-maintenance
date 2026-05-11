@@ -41,6 +41,7 @@ const TechnicianListPage: React.FC = () => {
 
   return (
     <PhoneShell title="ช่างซ่อม" rightAction={addBtn}>
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {loading ? (
         <div style={{ textAlign: 'center', color: 'var(--ink-4)', padding: '32px 0' }}>กำลังโหลด...</div>
       ) : (
@@ -173,6 +174,7 @@ const TechnicianListPage: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </PhoneShell>
   );
 };

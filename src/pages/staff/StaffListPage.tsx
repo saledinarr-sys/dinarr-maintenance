@@ -153,7 +153,7 @@ const StaffListPage: React.FC = () => {
       </div>
 
       {/* Cards */}
-      <div style={{ padding: '12px 16px 80px' }}>
+      <div style={{ padding: '12px 16px 80px', maxWidth: 960, margin: '0 auto' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: 'var(--ink-4)', padding: '48px 0' }}>กำลังโหลด...</div>
         ) : colTickets.length === 0 ? (
