@@ -103,14 +103,13 @@ const StaffDetailPage: React.FC = () => {
   const { user } = useApp();
   const { ticket: fetchedTicket, loading } = useTicket(id ?? '');
   const { events } = useTicketEvents(id ?? '');
-  const { updateStatus } = useTickets();
+  const { updateStatus, updatePhotoUrls } = useTickets();
 
   const [ticket, setLocalTicket] = useState<Ticket | null>(null);
   useEffect(() => { if (fetchedTicket) setLocalTicket(fetchedTicket); }, [fetchedTicket]);
 
   const { technician } = useTechnician(ticket?.assigned_tech_id ?? '');
   const { uploadPhotos, uploading } = useStorage();
-  const { updatePhotoUrls } = useTickets();
   const [confirmDone, setConfirmDone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
