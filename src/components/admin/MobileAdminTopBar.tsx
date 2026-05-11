@@ -1,4 +1,5 @@
 import React from 'react';
+import { Logo } from '../ui/Icon';
 
 interface Props {
   title: string;
@@ -6,18 +7,18 @@ interface Props {
   action?: React.ReactNode;
 }
 
-const MobileAdminTopBar: React.FC<Props> = ({ title, subtitle, action }) => (
+const MobileAdminTopBar: React.FC<Props> = ({ title, action }) => (
   <div style={{
-    padding: '20px 16px 14px',
-    background: 'var(--bg)',
+    height: 56,
+    display: 'flex', alignItems: 'center',
+    padding: '0 16px',
+    background: 'var(--surface)',
     borderBottom: '1px solid var(--border)',
-    display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-    gap: 12,
+    gap: 10, flexShrink: 0,
+    position: 'sticky', top: 0, zIndex: 10,
   }}>
-    <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink-1)', lineHeight: 1.15 }}>{title}</div>
-      {subtitle && <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 4 }}>{subtitle}</div>}
-    </div>
+    <Logo size={28} />
+    <div style={{ flex: 1, fontSize: 16, fontWeight: 600, color: 'var(--ink-1)' }}>{title}</div>
     {action && <div style={{ flexShrink: 0 }}>{action}</div>}
   </div>
 );

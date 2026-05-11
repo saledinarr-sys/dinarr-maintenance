@@ -40,45 +40,49 @@ const AdminLayout: React.FC = () => {
 
   /* ── MOBILE ── */
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: 'var(--bg)', overflow: 'hidden' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
 
-      {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-        <Outlet />
-        <div style={{ height: 80 }} /> {/* bottom tab clearance */}
+      {/* Phone-shell container — centered, max 430px */}
+      <div className="phone-root dn" style={{ overflow: 'visible' }}>
+
+        {/* Scrollable content */}
+        <div className="no-scrollbar" style={{
+          flex: 1, overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 80,
+        } as React.CSSProperties}>
+          <Outlet />
+        </div>
+
+        {/* Bottom tab bar — same style as PhoneShell */}
+        <div style={{
+          height: 64, display: 'flex', alignItems: 'center',
+          background: 'var(--surface)', borderTop: '1px solid var(--border)',
+          position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: 430, zIndex: 20,
+        }}>
+          {NAV.map(item => {
+            const active = location.pathname === item.path ||
+              (item.path !== '/admin/dashboard' && location.pathname.startsWith(item.path));
+            return (
+              <button key={item.path} onClick={() => navigate(item.path)}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  gap: 3, padding: '8px 0',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 10,
+                  fontWeight: active ? 600 : 400,
+                  color: active ? 'var(--brand)' : 'var(--ink-4)',
+                }}>
+                <item.icon size={20} stroke={active ? 'var(--brand)' : 'var(--ink-4)'} />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
       </div>
-
-      {/* Frosted glass bottom tab bar */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
-        background: 'rgba(255,255,255,0.88)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: '1px solid var(--border)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        display: 'flex', alignItems: 'stretch',
-      } as React.CSSProperties}>
-        {NAV.map(item => {
-          const active = location.pathname === item.path ||
-            (item.path !== '/admin/dashboard' && location.pathname.startsWith(item.path));
-          return (
-            <button key={item.path} onClick={() => navigate(item.path)}
-              style={{
-                flex: 1, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                gap: 3, padding: '10px 0 8px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 11,
-                fontWeight: active ? 600 : 500,
-                color: active ? 'var(--brand)' : 'var(--ink-4)',
-              }}>
-              <item.icon size={22} stroke={active ? 'var(--brand)' : 'var(--ink-4)'} />
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-
     </div>
   );
 };
