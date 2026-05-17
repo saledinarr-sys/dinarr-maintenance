@@ -5,7 +5,7 @@ import StatusPill from '../../components/ui/StatusPill';
 import PriorityChip from '../../components/ui/PriorityChip';
 import { CATEGORY_ICONS, MapPin, Clock, Phone, CheckCircle, X, Camera } from '../../components/ui/Icon';
 import { useTicket, useTickets } from '../../hooks/useTickets';
-import { useTechnician } from '../../hooks/useTechnicians';
+import { useTechnician, useTechnicians } from '../../hooks/useTechnicians';
 import { useStorage } from '../../hooks/useStorage';
 import { useApp } from '../../context/AppContext';
 import type { Ticket, TicketStatus } from '../../types';
@@ -93,6 +93,58 @@ const ConfirmDoneDialog: React.FC<{
   </div>
 );
 
+/* ─── Assign Tech Dialog ─── */
+const AssignTechDialog: React.FC<{
+  technicians: import('../../types').Technician[];
+  selectedId: string;
+  onChange: (id: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+  saving: boolean;
+}> = ({ technicians, selectedId, onChange, onConfirm, onClose, saving }) => (
+  <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    onClick={onClose}>
+    <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 380, padding: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
+      onClick={e => e.stopPropagation()}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-1)', marginBottom: 4 }}>🔧 มอบหมายช่าง</div>
+      <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>เลือกช่างที่รับผิดชอบงานนี้</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: 280, overflowY: 'auto' }}>
+        {technicians.map(t => (
+          <label key={t.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+            borderRadius: 'var(--r-md)', cursor: 'pointer',
+            border: `2px solid ${selectedId === t.id ? 'var(--brand)' : 'var(--border)'}`,
+            background: selectedId === t.id ? 'var(--brand-soft)' : 'var(--surface-2)',
+            transition: 'all .15s',
+          }}>
+            <input type="radio" name="assignTech" checked={selectedId === t.id}
+              onChange={() => onChange(t.id)} style={{ display: 'none' }} />
+            <div style={{
+              width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+              border: `2px solid ${selectedId === t.id ? 'var(--brand)' : 'var(--border-strong)'}`,
+              background: selectedId === t.id ? 'var(--brand)' : 'transparent',
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: selectedId === t.id ? 'var(--brand)' : 'var(--ink-1)' }}>{t.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{t.role} · {t.status === 'free' ? '✅ ว่าง' : t.status === 'busy' ? '🔧 กำลังทำงาน' : '🔴 หยุดงาน'}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button className="btn" onClick={onClose}
+          style={{ flex: 1, padding: '10px', fontSize: 13, color: 'var(--ink-3)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', cursor: 'pointer', fontFamily: 'inherit' }}>
+          ยกเลิก
+        </button>
+        <button className="btn btn-primary" onClick={onConfirm} disabled={saving || !selectedId}
+          style={{ flex: 2, padding: '10px', fontSize: 13, borderRadius: 'var(--r-lg)', opacity: !selectedId ? 0.5 : 1 }}>
+          {saving ? 'กำลังบันทึก...' : 'เริ่มดำเนินการ'}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 /* ═══════════════════════════════════════════════════════════════ */
 
 const StaffDetailPage: React.FC = () => {
@@ -108,8 +160,11 @@ const StaffDetailPage: React.FC = () => {
   useEffect(() => { if (fetchedTicket) setLocalTicket(fetchedTicket); }, [fetchedTicket]);
 
   const { technician } = useTechnician(ticket?.assigned_tech_id ?? '');
+  const { technicians } = useTechnicians();
   const { uploadPhotos, uploading } = useStorage();
   const [confirmDone, setConfirmDone] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
+  const [selectedTechId, setSelectedTechId] = useState('');
   const [saving, setSaving] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [afterFiles, setAfterFiles] = useState<File[]>([]);
@@ -158,13 +213,17 @@ const StaffDetailPage: React.FC = () => {
   const isStaff = user?.role === 'staff';
   const isAdmin = user?.role === 'admin';
 
-  const applyStatus = async (newStatus: TicketStatus) => {
+  const applyStatus = async (newStatus: TicketStatus, techId?: string) => {
     setSaving(true);
-    const updated: Ticket = { ...ticket, status: newStatus };
-    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName });
+    const updated: Ticket = { ...ticket, status: newStatus, assigned_tech_id: techId ?? ticket.assigned_tech_id };
+    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName, ticket });
+    if (techId) {
+      await supabase.from('tickets').update({ assigned_tech_id: techId }).eq('id', ticket.id);
+    }
     setLocalTicket(updated);
     setSaving(false);
     setConfirmDone(false);
+    setShowAssign(false);
   };
 
   return (
@@ -244,7 +303,7 @@ const StaffDetailPage: React.FC = () => {
 
       {/* ── STAFF ACTIONS ── */}
       {isStaff && ticket.status === 'new' && (
-        <button className="btn btn-primary" onClick={() => applyStatus('progress')} disabled={saving}
+        <button className="btn btn-primary" onClick={() => setShowAssign(true)} disabled={saving}
           style={{ width: '100%', height: 48, fontSize: 15, fontWeight: 600, marginBottom: 8 }}>
           🔧 เริ่มดำเนินการ
         </button>
@@ -354,6 +413,17 @@ const StaffDetailPage: React.FC = () => {
 
       {confirmDone && (
         <ConfirmDoneDialog saving={saving} onConfirm={() => applyStatus('done')} onClose={() => setConfirmDone(false)} />
+      )}
+
+      {showAssign && (
+        <AssignTechDialog
+          technicians={technicians}
+          selectedId={selectedTechId}
+          onChange={setSelectedTechId}
+          onConfirm={() => applyStatus('progress', selectedTechId || undefined)}
+          onClose={() => setShowAssign(false)}
+          saving={saving}
+        />
       )}
       </div>
     </PhoneShell>
