@@ -52,7 +52,7 @@ export function buildTicketOpenMsg(ticket: Ticket): string {
 ⏱️ SLA: ${ticket.sla_hours} ชั่วโมง${link}`;
 }
 
-export function buildStatusUpdateMsg(ticket: Ticket, actorName: string, detail?: string, techName?: string): string {
+export function buildStatusUpdateMsg(ticket: Ticket, _actorName: string, detail?: string, techName?: string): string {
   const appUrl = getAppUrl();
   const emoji = STATUS_EMOJI[ticket.status] ?? '🔄';
   const statusTh = STATUS_LABEL[ticket.status] ?? ticket.status;
