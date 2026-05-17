@@ -52,16 +52,17 @@ export function buildTicketOpenMsg(ticket: Ticket): string {
 ⏱️ SLA: ${ticket.sla_hours} ชั่วโมง${link}`;
 }
 
-export function buildStatusUpdateMsg(ticket: Ticket, actorName: string, detail?: string): string {
+export function buildStatusUpdateMsg(ticket: Ticket, actorName: string, detail?: string, techName?: string): string {
   const appUrl = getAppUrl();
   const emoji = STATUS_EMOJI[ticket.status] ?? '🔄';
   const statusTh = STATUS_LABEL[ticket.status] ?? ticket.status;
   const detailLine = detail ? `\n💬 ${detail}` : '';
+  const techLine = techName ? `\n🔧 ช่าง: ${techName}` : '';
   const link = appUrl ? `\n──────────────────\n<a href="${appUrl}/staff/ticket/${ticket.id}">ดูรายละเอียด →</a>` : '';
   return `${emoji} <b>อัปเดตสถานะ: ${statusTh}</b>
 ──────────────────
 📋 <b>${ticket.id}</b> · ${ticket.title}
-👤 โดย: ${actorName}${detailLine}${link}`;
+👤 โดย: ${actorName}${techLine}${detailLine}${link}`;
 }
 
 export function buildRatingMsg(ticket: Ticket, score: number, comment: string): string {

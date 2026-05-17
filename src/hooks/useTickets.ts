@@ -22,6 +22,7 @@ interface UpdateStatusInput {
   actorName: string;
   detail?: string;
   ticket?: Ticket; // optional: pass directly so Telegram always has ticket data
+  techName?: string; // optional: assigned technician name for Telegram message
 }
 
 // Module-level cache: tickets created locally (no Supabase) are stored here
@@ -189,7 +190,7 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
     return 'DN-' + String(max + Math.floor(Math.random() * 10) + 1).padStart(4, '0');
   };
 
-  const updateStatus = async ({ ticketId, status, actorName, detail, ticket: ticketArg }: UpdateStatusInput) => {
+  const updateStatus = async ({ ticketId, status, actorName, detail, ticket: ticketArg, techName }: UpdateStatusInput) => {
     const updateData: Partial<Ticket> & { status: TicketStatus } = { status };
 
     const actionMap: Record<TicketStatus, EventAction> = {
@@ -218,7 +219,7 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
 
     // Send Telegram notification
     if (updatedTicket) {
-      sendTelegramMessage(buildStatusUpdateMsg(updatedTicket, actorName, detail));
+      sendTelegramMessage(buildStatusUpdateMsg(updatedTicket, actorName, detail, techName));
     }
 
     // Try Supabase (best-effort)

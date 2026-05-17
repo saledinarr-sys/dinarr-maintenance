@@ -200,7 +200,8 @@ const StaffListPage: React.FC = () => {
   const handleConfirmAssign = async () => {
     if (!assignTicket) return;
     setSaving(true);
-    await updateStatus({ ticketId: assignTicket.id, status: 'progress', actorName: user?.name ?? 'เจ้าหน้าที่', ticket: assignTicket });
+    const techName = selectedTechId ? technicians.find(t => t.id === selectedTechId)?.name : undefined;
+    await updateStatus({ ticketId: assignTicket.id, status: 'progress', actorName: user?.name ?? 'เจ้าหน้าที่', ticket: assignTicket, techName });
     if (selectedTechId) {
       await supabase.from('tickets').update({ assigned_tech_id: selectedTechId }).eq('id', assignTicket.id);
     }

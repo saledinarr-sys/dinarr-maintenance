@@ -215,8 +215,9 @@ const StaffDetailPage: React.FC = () => {
 
   const applyStatus = async (newStatus: TicketStatus, techId?: string) => {
     setSaving(true);
+    const techName = techId ? technicians.find(t => t.id === techId)?.name : undefined;
     const updated: Ticket = { ...ticket, status: newStatus, assigned_tech_id: techId ?? ticket.assigned_tech_id };
-    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName, ticket });
+    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName, ticket, techName });
     if (techId) {
       await supabase.from('tickets').update({ assigned_tech_id: techId }).eq('id', ticket.id);
     }
