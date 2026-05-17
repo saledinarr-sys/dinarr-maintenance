@@ -5,6 +5,7 @@ import { Camera, X } from '../../components/ui/Icon';
 import { useTicket, useTickets } from '../../hooks/useTickets';
 import { useStorage } from '../../hooks/useStorage';
 import { useApp } from '../../context/AppContext';
+import { useTechnicians } from '../../hooks/useTechnicians';
 import type { TicketStatus } from '../../types';
 import { supabase } from '../../lib/supabase';
 
@@ -28,7 +29,10 @@ const TechUpdatePage: React.FC = () => {
   const { uploadPhotos, uploading } = useStorage();
   const { user } = useApp();
 
+  const { technicians } = useTechnicians();
+
   const [newStatus, setNewStatus] = useState<TicketStatus | ''>('');
+  const [assignedTechId, setAssignedTechId] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -57,6 +61,11 @@ const TechUpdatePage: React.FC = () => {
         detail: notes.trim() || undefined,
         ticket: ticket ?? undefined,
       });
+
+      // Save assigned technician when status = progress
+      if (newStatus === 'progress' && assignedTechId) {
+        await supabase.from('tickets').update({ assigned_tech_id: assignedTechId }).eq('id', id);
+      }
 
       // Upload photos best-effort — never block navigation
       if (files.length > 0) {
@@ -112,6 +121,29 @@ const TechUpdatePage: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Technician selector — shown only when status = progress */}
+      {newStatus === 'progress' && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 8 }}>
+            มอบหมายช่าง
+          </div>
+          <select
+            value={assignedTechId}
+            onChange={e => setAssignedTechId(e.target.value)}
+            className="input"
+            style={{ width: '100%' }}
+          >
+            <option value="">— เลือกช่าง —</option>
+            {technicians.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.name} · {t.role}
+                {t.status === 'free' ? ' ✅' : t.status === 'busy' ? ' 🔧' : ' 🔴'}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 8 }}>บันทึกจากช่าง</div>
