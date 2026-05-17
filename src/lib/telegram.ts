@@ -63,8 +63,7 @@ export function buildStatusUpdateMsg(ticket: Ticket, actorName: string, detail?:
   return `${emoji} <b>อัปเดตสถานะ: ${statusTh}</b>
 ──────────────────
 📋 <b>${ticket.id}</b> · ${ticket.title}
-📍 ${ticket.where_loc}${reporterLine}
-👤 โดย: ${actorName}${techLine}${detailLine}${link}`;
+📍 ${ticket.where_loc}${reporterLine}${techLine}${detailLine}${link}`;
 }
 
 export function buildRatingMsg(ticket: Ticket, score: number, comment: string): string {
