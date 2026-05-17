@@ -3,7 +3,11 @@ import { useState, useEffect } from 'react';
 const KEY = 'dinarr-theme';
 
 function applyTheme(dark: boolean) {
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  if (dark) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
 }
 
 export function useDarkMode() {
@@ -18,12 +22,12 @@ export function useDarkMode() {
     localStorage.setItem(KEY, dark ? 'dark' : 'light');
   }, [dark]);
 
-  const toggle = () => setDark(d => !d);
-
-  return { dark, toggle };
+  return { dark, toggle: () => setDark(d => !d) };
 }
 
-// Init on load (before React mounts) to avoid flash
-const saved = localStorage.getItem(KEY);
-const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-applyTheme(saved ? saved === 'dark' : prefersDark);
+// Apply immediately before React mounts (avoid white flash)
+(function () {
+  const saved = localStorage.getItem(KEY);
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved ? saved === 'dark' : prefersDark);
+})();
