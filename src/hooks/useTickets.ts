@@ -21,6 +21,7 @@ interface UpdateStatusInput {
   status: TicketStatus;
   actorName: string;
   detail?: string;
+  ticket?: Ticket; // optional: pass directly so Telegram always has ticket data
 }
 
 // Module-level cache: tickets created locally (no Supabase) are stored here
@@ -188,7 +189,7 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
     return 'DN-' + String(max + Math.floor(Math.random() * 10) + 1).padStart(4, '0');
   };
 
-  const updateStatus = async ({ ticketId, status, actorName, detail }: UpdateStatusInput) => {
+  const updateStatus = async ({ ticketId, status, actorName, detail, ticket: ticketArg }: UpdateStatusInput) => {
     const updateData: Partial<Ticket> & { status: TicketStatus } = { status };
 
     const actionMap: Record<TicketStatus, EventAction> = {
@@ -204,6 +205,16 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
       updatedTicket = updated;
       return updated;
     }));
+
+    // Fallback: check cache, then use ticketArg if provided
+    if (!updatedTicket) {
+      const cached = localTicketCache.get(ticketId);
+      const base = cached ?? ticketArg ?? null;
+      if (base) {
+        updatedTicket = { ...base, ...updateData };
+        localTicketCache.set(ticketId, updatedTicket);
+      }
+    }
 
     // Send Telegram notification
     if (updatedTicket) {

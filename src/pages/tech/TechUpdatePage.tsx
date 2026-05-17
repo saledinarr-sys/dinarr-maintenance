@@ -55,6 +55,7 @@ const TechUpdatePage: React.FC = () => {
         status: newStatus,
         actorName: user?.name ?? 'ช่าง',
         detail: notes.trim() || undefined,
+        ticket: ticket ?? undefined,
       });
 
       // Upload photos best-effort — never block navigation
