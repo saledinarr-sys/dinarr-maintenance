@@ -67,7 +67,7 @@ const AdminBoardPage: React.FC = () => {
                 <span style={{ fontSize: 13 }}>{c.emoji}</span>
                 {STATUS_LABEL[c.status]}
                 <span style={{
-                  background: isActive ? '#fff' : 'var(--surface-2)',
+                  background: isActive ? c.color + '22' : 'var(--surface-2)',
                   color: isActive ? c.color : 'var(--ink-4)',
                   fontSize: 10.5, fontWeight: 700,
                   minWidth: 18, height: 18, padding: '0 5px',
@@ -154,21 +154,21 @@ const AdminBoardPage: React.FC = () => {
             const colTickets = tickets.filter(t => t.status === col.status);
             return (
               <div key={col.status} style={{ minWidth: 268, maxWidth: 268, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <div style={{ borderRadius: '12px 12px 0 0', background: col.bg, border: `1.5px solid ${col.color}40`, borderBottom: 'none', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ borderRadius: '12px 12px 0 0', background: col.color + '20', border: `1.5px solid ${col.color}50`, borderBottom: 'none', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 15 }}>{col.emoji}</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: col.color, flex: 1 }}>{STATUS_LABEL[col.status]}</span>
                   <div style={{ minWidth: 24, height: 24, borderRadius: 12, background: col.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
                     {colTickets.length}
                   </div>
                 </div>
-                <div style={{ background: col.bg + '80', border: `1.5px solid ${col.color}40`, borderTop: `2px solid ${col.color}`, borderRadius: '0 0 12px 12px', padding: '10px 10px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 80 }}>
+                <div style={{ background: 'var(--surface-2)', border: `1.5px solid ${col.color}40`, borderTop: `2px solid ${col.color}`, borderRadius: '0 0 12px 12px', padding: '10px 10px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 80 }}>
                   {colTickets.map(t => {
                     const CatIcon = CATEGORY_ICONS[t.category_id];
                     const catColor = CATEGORY_COLOR[t.category_id];
                     const borderColor = PRIORITY_BORDER[t.priority] ?? '#D1D5DB';
                     return (
                       <div key={t.id} onClick={() => navigate(`/staff/ticket/${t.id}`)}
-                        style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: `3px solid ${borderColor}`, transition: 'transform .12s, box-shadow .12s' }}
+                        style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: `3px solid ${borderColor}`, transition: 'transform .12s, box-shadow .12s' }}
                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)'; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
