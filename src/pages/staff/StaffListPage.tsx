@@ -176,7 +176,7 @@ const KanbanCard: React.FC<{
 const StaffListPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useApp();
-  const { tickets, loading, updateStatus } = useTickets();
+  const { tickets, loading, updateStatus, refetch } = useTickets();
   const { technicians } = useTechnicians();
   const [activeCol, setActiveCol] = useState<KanbanCol>('new');
   const [assignTicket, setAssignTicket] = useState<Ticket | null>(null);
@@ -207,6 +207,7 @@ const StaffListPage: React.FC = () => {
     }
     setSaving(false);
     setAssignTicket(null);
+    refetch();
   };
 
   /* ── DESKTOP: 3-column kanban ── */
