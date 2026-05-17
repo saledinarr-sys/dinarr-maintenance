@@ -97,6 +97,7 @@ function helpMessage(): string {
 /status — ดูงานค้างทั้งหมด (new + progress)
 /new — ดูเฉพาะงานที่รอดำเนินการ
 /progress — ดูเฉพาะงานที่กำลังซ่อม
+/done — ดูงานที่เสร็จแล้ว (10 รายการล่าสุด)
 /help — แสดงคำสั่งทั้งหมด`;
 }
 
@@ -152,6 +153,18 @@ export default async function handler(req: Request): Promise<Response> {
       ? '✅ ไม่มีงานกำลังดำเนินการ'
       : `🔧 <b>งานกำลังดำเนินการ</b> (${tickets.length} รายการ)\n──────────────────\n` +
         tickets.map(t => `• ${PRIORITY_EMOJI[t.priority] ?? ''} <b>${t.id}</b> · ${t.title}\n  📍 ${t.where_loc}`).join('\n');
+    await replyToTelegram(botToken, chatId, msg);
+
+  } else if (text === '/done' || text === '/เสร็จ') {
+    const tickets = await fetchTickets(supabaseUrl, serviceKey, 'done');
+    const recent = tickets.slice(0, 10);
+    const msg = recent.length === 0
+      ? '📭 ยังไม่มีงานที่เสร็จแล้ว'
+      : `✅ <b>งานที่เสร็จแล้ว</b> (10 รายการล่าสุด)\n──────────────────\n` +
+        recent.map(t => {
+          const date = new Date(t.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+          return `• ${PRIORITY_EMOJI[t.priority] ?? ''} <b>${t.id}</b> · ${t.title}\n  📍 ${t.where_loc} · 📅 ${date}`;
+        }).join('\n');
     await replyToTelegram(botToken, chatId, msg);
 
   } else {
