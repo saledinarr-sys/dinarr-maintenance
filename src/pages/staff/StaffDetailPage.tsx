@@ -11,6 +11,7 @@ import { useApp } from '../../context/AppContext';
 import type { Ticket, TicketStatus } from '../../types';
 import { CATEGORY_LABEL, CATEGORY_COLOR } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { sendTelegramMessage, buildRatingMsg } from '../../lib/telegram';
 
 /* ─── Photo Lightbox ─── */
 const PhotoLightbox: React.FC<{
@@ -60,7 +61,54 @@ const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value
   </div>
 );
 
-/* ─── Confirm Close Dialog ─── */
+/* ─── Rating + Done Dialog ─── */
+const RatingDoneDialog: React.FC<{
+  ticket: Ticket;
+  onConfirm: (score: number, comment: string) => void;
+  onClose: () => void;
+  saving: boolean;
+}> = ({ ticket, onConfirm, onClose, saving }) => {
+  const [score, setScore] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState('');
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={onClose}>
+      <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 380, padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-1)', marginBottom: 4 }}>✅ ปิดงานและประเมินผล</div>
+        <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 4 }}>{ticket.id} · {ticket.title}</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-4)', marginBottom: 20 }}>ให้คะแนนการซ่อมครั้งนี้</div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <button key={i} type="button"
+              onClick={() => setScore(i)}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(0)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 32, lineHeight: 1, padding: 2, transition: 'transform .1s', transform: (hover || score) >= i ? 'scale(1.15)' : 'scale(1)' }}>
+              {(hover || score) >= i ? '⭐' : '☆'}
+            </button>
+          ))}
+        </div>
+        <textarea className="input" value={comment} onChange={e => setComment(e.target.value)}
+          placeholder="ความคิดเห็นเพิ่มเติม (ไม่บังคับ)..." rows={3}
+          style={{ width: '100%', marginBottom: 16, resize: 'none' }} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose}
+            style={{ flex: 1, padding: '10px', fontSize: 13, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink-2)' }}>
+            ยกเลิก
+          </button>
+          <button onClick={() => onConfirm(score, comment)} disabled={saving}
+            style={{ flex: 2, padding: '10px', fontSize: 13, fontWeight: 600, background: 'var(--ok)', color: '#fff', border: 'none', borderRadius: 'var(--r-lg)', cursor: 'pointer', fontFamily: 'inherit' }}>
+            {saving ? 'กำลังบันทึก...' : score > 0 ? `✅ เสร็จสิ้น (${score}★)` : '✅ เสร็จสิ้น (ไม่ประเมิน)'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Confirm Close Dialog (Admin) ─── */
 const ConfirmDoneDialog: React.FC<{
   onConfirm: () => void;
   onClose: () => void;
@@ -70,9 +118,6 @@ const ConfirmDoneDialog: React.FC<{
     onClick={onClose}>
     <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 360, padding: '28px 24px', textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
       onClick={e => e.stopPropagation()}>
-      <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer' }}>
-        <X size={18} stroke="var(--ink-3)" />
-      </button>
       <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
       <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-1)', marginBottom: 8 }}>ยืนยันปิดงาน?</div>
       <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 24, lineHeight: 1.6 }}>
@@ -163,6 +208,8 @@ const StaffDetailPage: React.FC = () => {
   const { technicians } = useTechnicians();
   const { uploadPhotos, uploading } = useStorage();
   const [confirmDone, setConfirmDone] = useState(false);
+  const [showRatingDone, setShowRatingDone] = useState(false);
+  const [ratingSaving, setRatingSaving] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
   const [selectedTechId, setSelectedTechId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -223,6 +270,23 @@ const StaffDetailPage: React.FC = () => {
     setSaving(false);
     setConfirmDone(false);
     setShowAssign(false);
+  };
+
+  const handleConfirmRatingDone = async (score: number, comment: string) => {
+    setRatingSaving(true);
+    const resolvedTechId = ticket.assigned_tech_id ?? undefined;
+    const techName = resolvedTechId ? technicians.find(t => t.id === resolvedTechId)?.name : undefined;
+    await updateStatus({ ticketId: ticket.id, status: 'done', actorName, ticket, techName });
+    setLocalTicket(prev => prev ? { ...prev, status: 'done', rating: score > 0 ? score : prev.rating } : prev);
+    if (score > 0) {
+      try {
+        await supabase.from('tickets').update({ rating: score }).eq('id', ticket.id);
+        await supabase.from('ratings').insert({ ticket_id: ticket.id, score, comment: comment.trim(), tags: [] });
+      } catch { /* best-effort */ }
+      sendTelegramMessage(buildRatingMsg(ticket, score, comment));
+    }
+    setRatingSaving(false);
+    setShowRatingDone(false);
   };
 
   return (
@@ -314,7 +378,7 @@ const StaffDetailPage: React.FC = () => {
             style={{ flex: 1, height: 44, fontSize: 14, fontWeight: 600, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--ink-3)', borderRadius: 'var(--r-lg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>
             ← ย้อนกลับ
           </button>
-          <button className="btn" onClick={() => applyStatus('done')} disabled={saving}
+          <button className="btn" onClick={() => setShowRatingDone(true)} disabled={saving}
             style={{ flex: 2, height: 44, fontSize: 14, fontWeight: 600, background: 'var(--ok)', color: '#fff', border: 'none', borderRadius: 'var(--r-lg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
             ✅ เสร็จสิ้น
           </button>
@@ -412,6 +476,13 @@ const StaffDetailPage: React.FC = () => {
 
       {confirmDone && (
         <ConfirmDoneDialog saving={saving} onConfirm={() => applyStatus('done')} onClose={() => setConfirmDone(false)} />
+      )}
+
+      {showRatingDone && (
+        <RatingDoneDialog ticket={ticket}
+          onConfirm={handleConfirmRatingDone}
+          onClose={() => setShowRatingDone(false)}
+          saving={ratingSaving} />
       )}
 
       {showAssign && (

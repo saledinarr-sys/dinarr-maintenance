@@ -8,8 +8,61 @@ import { CATEGORY_ICONS, Clock, User } from '../../components/ui/Icon';
 import { useTechnicians } from '../../hooks/useTechnicians';
 import { CATEGORY_COLOR, CATEGORY_LABEL } from '../../types';
 import type { TicketStatus, Ticket, Technician } from '../../types';
+import { supabase } from '../../lib/supabase';
+import { sendTelegramMessage, buildRatingMsg } from '../../lib/telegram';
 
 type KanbanCol = 'new' | 'progress' | 'done';
+
+const RatingDoneDialog: React.FC<{
+  ticket: Ticket;
+  onConfirm: (score: number, comment: string) => void;
+  onClose: () => void;
+  saving: boolean;
+}> = ({ ticket, onConfirm, onClose, saving }) => {
+  const [score, setScore] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState('');
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={onClose}>
+      <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 380, padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-1)', marginBottom: 4 }}>✅ ปิดงานและประเมินผล</div>
+        <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 4 }}>{ticket.id} · {ticket.title}</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-4)', marginBottom: 20 }}>ให้คะแนนการซ่อมครั้งนี้</div>
+
+        {/* Stars */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <button key={i} type="button"
+              onClick={() => setScore(i)}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(0)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 32, lineHeight: 1, padding: 2, transition: 'transform .1s', transform: (hover || score) >= i ? 'scale(1.15)' : 'scale(1)' }}>
+              {(hover || score) >= i ? '⭐' : '☆'}
+            </button>
+          ))}
+        </div>
+
+        {/* Comment */}
+        <textarea className="input" value={comment} onChange={e => setComment(e.target.value)}
+          placeholder="ความคิดเห็นเพิ่มเติม (ไม่บังคับ)..." rows={3}
+          style={{ width: '100%', marginBottom: 16, resize: 'none' }} />
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose}
+            style={{ flex: 1, padding: '10px', fontSize: 13, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink-2)' }}>
+            ยกเลิก
+          </button>
+          <button onClick={() => onConfirm(score, comment)} disabled={saving}
+            style={{ flex: 2, padding: '10px', fontSize: 13, fontWeight: 600, background: 'var(--ok)', color: '#fff', border: 'none', borderRadius: 'var(--r-lg)', cursor: 'pointer', fontFamily: 'inherit' }}>
+            {saving ? 'กำลังบันทึก...' : score > 0 ? `✅ เสร็จสิ้น (${score}★)` : '✅ เสร็จสิ้น (ไม่ประเมิน)'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AssignTechDialog: React.FC<{
   technicians: Technician[];
@@ -181,6 +234,8 @@ const StaffListPage: React.FC = () => {
   const [assignTicket, setAssignTicket] = useState<Ticket | null>(null);
   const [selectedTechId, setSelectedTechId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [ratingTicket, setRatingTicket] = useState<Ticket | null>(null);
+  const [ratingSaving, setRatingSaving] = useState(false);
   const isMobile = useIsMobile();
   const isStaff = user?.role === 'staff';
 
@@ -193,8 +248,35 @@ const StaffListPage: React.FC = () => {
       setSelectedTechId('');
       return;
     }
+    if (newStatus === 'done') {
+      setRatingTicket(ticket);
+      return;
+    }
     const techName = getTechName(ticket.assigned_tech_id);
     await updateStatus({ ticketId: ticket.id, status: newStatus, actorName: user?.name ?? 'เจ้าหน้าที่', ticket, techName });
+  };
+
+  const handleConfirmDone = async (score: number, comment: string) => {
+    if (!ratingTicket) return;
+    setRatingSaving(true);
+    const techName = getTechName(ratingTicket.assigned_tech_id);
+    await updateStatus({
+      ticketId: ratingTicket.id, status: 'done',
+      actorName: user?.name ?? 'เจ้าหน้าที่',
+      ticket: ratingTicket, techName,
+    });
+    if (score > 0) {
+      try {
+        await supabase.from('tickets').update({ rating: score }).eq('id', ratingTicket.id);
+        await supabase.from('ratings').insert({
+          ticket_id: ratingTicket.id, score, comment: comment.trim(), tags: [],
+        });
+      } catch { /* best-effort */ }
+      sendTelegramMessage(buildRatingMsg(ratingTicket, score, comment));
+    }
+    setRatingSaving(false);
+    setRatingTicket(null);
+    refetch();
   };
 
   const handleConfirmAssign = async () => {
@@ -267,6 +349,12 @@ const StaffListPage: React.FC = () => {
           onChange={setSelectedTechId} onConfirm={handleConfirmAssign}
           onClose={() => setAssignTicket(null)} saving={saving} />
       )}
+      {ratingTicket && (
+        <RatingDoneDialog ticket={ratingTicket}
+          onConfirm={handleConfirmDone}
+          onClose={() => setRatingTicket(null)}
+          saving={ratingSaving} />
+      )}
       </PhoneShell>
     );
   }
@@ -329,6 +417,12 @@ const StaffListPage: React.FC = () => {
         <AssignTechDialog technicians={technicians} selectedId={selectedTechId}
           onChange={setSelectedTechId} onConfirm={handleConfirmAssign}
           onClose={() => setAssignTicket(null)} saving={saving} />
+      )}
+      {ratingTicket && (
+        <RatingDoneDialog ticket={ratingTicket}
+          onConfirm={handleConfirmDone}
+          onClose={() => setRatingTicket(null)}
+          saving={ratingSaving} />
       )}
     </PhoneShell>
   );
