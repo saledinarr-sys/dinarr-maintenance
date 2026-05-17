@@ -7,9 +7,60 @@ import PriorityChip from '../../components/ui/PriorityChip';
 import { CATEGORY_ICONS, Clock, User } from '../../components/ui/Icon';
 import { useTechnicians } from '../../hooks/useTechnicians';
 import { CATEGORY_COLOR, CATEGORY_LABEL } from '../../types';
-import type { TicketStatus, Ticket } from '../../types';
+import type { TicketStatus, Ticket, Technician } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 type KanbanCol = 'new' | 'progress' | 'done';
+
+const AssignTechDialog: React.FC<{
+  technicians: Technician[];
+  selectedId: string;
+  onChange: (id: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+  saving: boolean;
+}> = ({ technicians, selectedId, onChange, onConfirm, onClose, saving }) => (
+  <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    onClick={onClose}>
+    <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 380, padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
+      onClick={e => e.stopPropagation()}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-1)', marginBottom: 4 }}>🔧 มอบหมายช่าง</div>
+      <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>เลือกช่างที่รับผิดชอบงานนี้</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: 280, overflowY: 'auto' }}>
+        {technicians.map(t => (
+          <label key={t.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+            borderRadius: 'var(--r-md)', cursor: 'pointer',
+            border: `2px solid ${selectedId === t.id ? 'var(--brand)' : 'var(--border)'}`,
+            background: selectedId === t.id ? 'var(--brand-soft)' : 'var(--surface-2)',
+            transition: 'all .15s',
+          }}>
+            <input type="radio" name="assignTech" checked={selectedId === t.id}
+              onChange={() => onChange(t.id)} style={{ display: 'none' }} />
+            <div style={{
+              width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+              border: `2px solid ${selectedId === t.id ? 'var(--brand)' : 'var(--border-strong)'}`,
+              background: selectedId === t.id ? 'var(--brand)' : 'transparent',
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: selectedId === t.id ? 'var(--brand)' : 'var(--ink-1)' }}>{t.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{t.role} · {t.status === 'free' ? '✅ ว่าง' : t.status === 'busy' ? '🔧 กำลังทำงาน' : '🔴 หยุดงาน'}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={onClose} style={{ flex: 1, padding: '10px', fontSize: 13, color: 'var(--ink-3)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', cursor: 'pointer', fontFamily: 'inherit' }}>
+          ยกเลิก
+        </button>
+        <button onClick={onConfirm} disabled={saving || !selectedId}
+          style={{ flex: 2, padding: '10px', fontSize: 13, fontWeight: 600, background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: 'var(--r-lg)', cursor: selectedId ? 'pointer' : 'not-allowed', opacity: !selectedId ? 0.5 : 1, fontFamily: 'inherit' }}>
+          {saving ? 'กำลังบันทึก...' : 'เริ่มดำเนินการ'}
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 const COLUMNS: { key: KanbanCol; label: string; color: string; bg: string; border: string }[] = [
   { key: 'new',      label: 'รับเรื่อง',  color: '#2B7CE9', bg: '#F0F5FF', border: '#BFCFF8' },
@@ -128,6 +179,9 @@ const StaffListPage: React.FC = () => {
   const { tickets, loading, updateStatus } = useTickets();
   const { technicians } = useTechnicians();
   const [activeCol, setActiveCol] = useState<KanbanCol>('new');
+  const [assignTicket, setAssignTicket] = useState<Ticket | null>(null);
+  const [selectedTechId, setSelectedTechId] = useState('');
+  const [saving, setSaving] = useState(false);
   const isMobile = useIsMobile();
   const isStaff = user?.role === 'staff';
 
@@ -135,7 +189,23 @@ const StaffListPage: React.FC = () => {
     techId ? technicians.find(t => t.id === techId)?.name : undefined;
 
   const handleStatusChange = async (ticket: Ticket, newStatus: TicketStatus) => {
-    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName: user?.name ?? 'เจ้าหน้าที่' });
+    if (newStatus === 'progress') {
+      setAssignTicket(ticket);
+      setSelectedTechId('');
+      return;
+    }
+    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName: user?.name ?? 'เจ้าหน้าที่', ticket });
+  };
+
+  const handleConfirmAssign = async () => {
+    if (!assignTicket) return;
+    setSaving(true);
+    await updateStatus({ ticketId: assignTicket.id, status: 'progress', actorName: user?.name ?? 'เจ้าหน้าที่', ticket: assignTicket });
+    if (selectedTechId) {
+      await supabase.from('tickets').update({ assigned_tech_id: selectedTechId }).eq('id', assignTicket.id);
+    }
+    setSaving(false);
+    setAssignTicket(null);
   };
 
   /* ── DESKTOP: 3-column kanban ── */
@@ -188,6 +258,11 @@ const StaffListPage: React.FC = () => {
             })}
           </div>
         </div>
+      {assignTicket && (
+        <AssignTechDialog technicians={technicians} selectedId={selectedTechId}
+          onChange={setSelectedTechId} onConfirm={handleConfirmAssign}
+          onClose={() => setAssignTicket(null)} saving={saving} />
+      )}
       </PhoneShell>
     );
   }
@@ -245,6 +320,12 @@ const StaffListPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {assignTicket && (
+        <AssignTechDialog technicians={technicians} selectedId={selectedTechId}
+          onChange={setSelectedTechId} onConfirm={handleConfirmAssign}
+          onClose={() => setAssignTicket(null)} saving={saving} />
+      )}
     </PhoneShell>
   );
 };
