@@ -122,7 +122,7 @@ const AdminSettingsPage: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: tgChatId.trim(),
-          text: `✅ <b>ทดสอบการเชื่อมต่อ Dinarr</b>\n\nการตั้งค่า Telegram สำเร็จแล้ว!\nแจ้งเตือนจะส่งมาที่นี่โดยอัตโนมัติ 🎉`,
+          text: `✅ <b>ทดสอบการเชื่อมต่อ Dinarr</b>\n\nการตั้งค่า Telegram สำเร็จแล้ว!\nแจ้งเตือนจะส่งมาที่นี่โดยอัตโนมัติ 🎉\n\nพิมพ์ /help เพื่อดูคำสั่งที่ใช้ได้`,
           parse_mode: 'HTML',
         }),
       });
@@ -133,6 +133,22 @@ const AdminSettingsPage: React.FC = () => {
       showToast('เกิดข้อผิดพลาด — ตรวจสอบ Token อีกครั้ง');
     }
     setTgTesting(false);
+  };
+
+  const registerWebhook = async () => {
+    if (!tgToken.trim()) return;
+    const appUrl = import.meta.env.VITE_APP_URL as string | undefined ?? window.location.origin;
+    const webhookUrl = `${appUrl}/api/telegram-webhook`;
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${tgToken.trim()}/setWebhook?url=${encodeURIComponent(webhookUrl)}`
+      );
+      const data = await res.json() as { ok: boolean; description?: string };
+      if (data.ok) showToast('ลงทะเบียน Webhook สำเร็จ ✓ Bot รับคำสั่งได้แล้ว');
+      else showToast(`ลงทะเบียนไม่สำเร็จ: ${data.description ?? 'ไม่ทราบสาเหตุ'}`);
+    } catch {
+      showToast('เกิดข้อผิดพลาด — ตรวจสอบ Token');
+    }
   };
 
   type SlaRow = {
@@ -279,12 +295,10 @@ const AdminSettingsPage: React.FC = () => {
       <div style={{ fontSize: 11.5, color: 'var(--ink-4)', background: 'var(--surface-2)',
         padding: '10px 12px', borderRadius: 'var(--r-md)', marginBottom: 14, lineHeight: 1.6 }}>
         📌 วิธีสร้าง Bot: เปิด Telegram → ค้นหา <b>@BotFather</b> → พิมพ์ <code>/newbot</code> → คัดลอก Token<br />
-        📌 วิธีหา Chat ID: ส่งข้อความหา bot → เปิด
-        {' '}<code style={{ wordBreak: 'break-all' }}>api.telegram.org/bot{'<TOKEN>'}/getUpdates</code>
-        {' '}→ คัดลอก <code>chat.id</code>
+        📌 วิธีหา Chat ID: ค้นหา <b>@userinfobot</b> → กด Start → คัดลอกตัวเลข <b>Id</b>
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <button className="btn" style={{ flex: 1, height: 42, fontSize: 13, fontWeight: 600,
           background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--ink-2)' }}
           onClick={testTelegram}
@@ -295,6 +309,25 @@ const AdminSettingsPage: React.FC = () => {
           onClick={saveTelegram}>
           บันทึก
         </button>
+      </div>
+
+      {/* Webhook registration */}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 6 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 4 }}>
+          รับคำสั่งจาก Telegram
+        </div>
+        <div style={{ fontSize: 11.5, color: 'var(--ink-4)', marginBottom: 10, lineHeight: 1.5 }}>
+          กด "ลงทะเบียน" เพื่อให้ Bot รับคำสั่งได้ เช่น พิมพ์ <code>/status</code> แล้ว Bot ตอบกลับรายการงานค้างทันที
+        </div>
+        <button className="btn" style={{ width: '100%', height: 40, fontSize: 13, fontWeight: 600,
+          background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--brand)' }}
+          onClick={registerWebhook}
+          disabled={!tgToken.trim()}>
+          🔗 ลงทะเบียน Webhook (ทำครั้งเดียว)
+        </button>
+        <div style={{ fontSize: 11, color: 'var(--ink-5, var(--ink-4))', marginTop: 6 }}>
+          คำสั่งที่ใช้ได้: <code>/status</code> · <code>/new</code> · <code>/progress</code> · <code>/help</code>
+        </div>
       </div>
     </SectionCard>
   );
