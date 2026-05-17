@@ -215,9 +215,10 @@ const StaffDetailPage: React.FC = () => {
 
   const applyStatus = async (newStatus: TicketStatus, techId?: string) => {
     setSaving(true);
-    const techName = techId ? technicians.find(t => t.id === techId)?.name : undefined;
+    const resolvedTechId = techId ?? ticket.assigned_tech_id ?? undefined;
+    const techName = resolvedTechId ? technicians.find(t => t.id === resolvedTechId)?.name : undefined;
     const updated: Ticket = { ...ticket, status: newStatus, assigned_tech_id: techId ?? ticket.assigned_tech_id };
-    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName, ticket, techName, assigned_tech_id: techId });
+    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName, ticket, techName, assigned_tech_id: techId ?? undefined });
     setLocalTicket(updated);
     setSaving(false);
     setConfirmDone(false);

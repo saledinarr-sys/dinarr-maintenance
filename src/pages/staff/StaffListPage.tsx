@@ -193,7 +193,8 @@ const StaffListPage: React.FC = () => {
       setSelectedTechId('');
       return;
     }
-    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName: user?.name ?? 'เจ้าหน้าที่', ticket });
+    const techName = getTechName(ticket.assigned_tech_id);
+    await updateStatus({ ticketId: ticket.id, status: newStatus, actorName: user?.name ?? 'เจ้าหน้าที่', ticket, techName });
   };
 
   const handleConfirmAssign = async () => {
