@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSettings, getSettings } from '../../hooks/useSettings';
 import { useIsMobileAdmin } from '../../components/admin/AdminLayout';
 import MobileAdminTopBar from '../../components/admin/MobileAdminTopBar';
+import { supabase } from '../../lib/supabase';
 import type { TicketPriority } from '../../types';
 import { PRIORITY_LABEL } from '../../types';
 
@@ -69,6 +70,27 @@ const AdminSettingsPage: React.FC = () => {
   const [tgToken, setTgToken] = useState(settings.telegramBotToken);
   const [tgChatId, setTgChatId] = useState(settings.telegramChatId);
   const [tgTesting, setTgTesting] = useState(false);
+
+  // Section F — Clear Data
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearInput, setClearInput] = useState('');
+  const [clearing, setClearing] = useState(false);
+
+  const clearAllData = async () => {
+    if (clearInput !== 'ลบทั้งหมด') return;
+    setClearing(true);
+    try {
+      await supabase.from('ratings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('ticket_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('tickets').delete().neq('id', 'NONE');
+      setShowClearConfirm(false);
+      setClearInput('');
+      showToast('✅ ล้างข้อมูลทั้งหมดแล้ว');
+    } catch {
+      showToast('❌ เกิดข้อผิดพลาด กรุณาลองใหม่');
+    }
+    setClearing(false);
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -350,6 +372,52 @@ const AdminSettingsPage: React.FC = () => {
     </div>
   ) : null;
 
+  const sectionF = (
+    <SectionCard title="⚠️ โซนอันตราย" subtitle="การกระทำนี้ไม่สามารถย้อนกลับได้">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-1)' }}>ล้างข้อมูลทั้งหมด</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 2 }}>ลบตั๋วซ่อม, timeline และการให้คะแนนทั้งหมด เริ่มระบบใหม่</div>
+        </div>
+        <button onClick={() => { setShowClearConfirm(true); setClearInput(''); }}
+          style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', border: '1.5px solid var(--crit)', background: 'none', color: 'var(--crit)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+          🗑️ ล้างข้อมูล
+        </button>
+      </div>
+
+      {/* Confirm Dialog */}
+      {showClearConfirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setShowClearConfirm(false)}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 380, padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 28, textAlign: 'center', marginBottom: 8 }}>⚠️</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'center', marginBottom: 8 }}>ยืนยันการล้างข้อมูล?</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-3)', textAlign: 'center', marginBottom: 20, lineHeight: 1.6 }}>
+              ข้อมูลตั๋วซ่อม, timeline และคะแนนทั้งหมดจะถูกลบถาวร<br/>
+              <strong style={{ color: 'var(--crit)' }}>ไม่สามารถกู้คืนได้</strong>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>พิมพ์ <strong>ลบทั้งหมด</strong> เพื่อยืนยัน</div>
+              <input className="input" value={clearInput} onChange={e => setClearInput(e.target.value)}
+                placeholder="ลบทั้งหมด" style={{ width: '100%', borderColor: clearInput === 'ลบทั้งหมด' ? 'var(--crit)' : undefined }} />
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowClearConfirm(false)}
+                style={{ flex: 1, padding: '10px', fontSize: 13, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink-2)' }}>
+                ยกเลิก
+              </button>
+              <button onClick={clearAllData} disabled={clearInput !== 'ลบทั้งหมด' || clearing}
+                style={{ flex: 2, padding: '10px', fontSize: 13, fontWeight: 600, background: clearInput === 'ลบทั้งหมด' ? 'var(--crit)' : 'var(--surface-2)', color: clearInput === 'ลบทั้งหมด' ? '#fff' : 'var(--ink-4)', border: 'none', borderRadius: 'var(--r-lg)', cursor: clearInput === 'ลบทั้งหมด' ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                {clearing ? 'กำลังล้าง...' : '🗑️ ล้างข้อมูลทั้งหมด'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </SectionCard>
+  );
+
   /* ── MOBILE ── */
   if (isMobile) {
     return (
@@ -362,6 +430,7 @@ const AdminSettingsPage: React.FC = () => {
           {sectionC}
           {sectionD}
           {sectionE}
+          {sectionF}
         </div>
       </div>
     );
@@ -380,6 +449,7 @@ const AdminSettingsPage: React.FC = () => {
         <div>{sectionC}{sectionD}</div>
       </div>
       <div style={{ maxWidth: 900, marginTop: 0 }}>{sectionE}</div>
+      <div style={{ maxWidth: 900, marginTop: 0 }}>{sectionF}</div>
     </div>
   );
 };
