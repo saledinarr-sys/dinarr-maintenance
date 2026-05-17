@@ -59,9 +59,11 @@ export function buildStatusUpdateMsg(ticket: Ticket, actorName: string, detail?:
   const detailLine = detail ? `\n💬 ${detail}` : '';
   const techLine = techName ? `\n🔧 ช่าง: ${techName}` : '';
   const link = appUrl ? `\n──────────────────\n<a href="${appUrl}/staff/ticket/${ticket.id}">ดูรายละเอียด →</a>` : '';
+  const reporterLine = ticket.reporter_name ? `\n📝 ผู้แจ้ง: ${ticket.reporter_name}` : '';
   return `${emoji} <b>อัปเดตสถานะ: ${statusTh}</b>
 ──────────────────
 📋 <b>${ticket.id}</b> · ${ticket.title}
+📍 ${ticket.where_loc}${reporterLine}
 👤 โดย: ${actorName}${techLine}${detailLine}${link}`;
 }
 
