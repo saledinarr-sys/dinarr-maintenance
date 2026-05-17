@@ -23,6 +23,7 @@ interface UpdateStatusInput {
   detail?: string;
   ticket?: Ticket; // optional: pass directly so Telegram always has ticket data
   techName?: string; // optional: assigned technician name for Telegram message
+  assigned_tech_id?: string; // optional: save to cache + Supabase together
 }
 
 // Module-level cache: tickets created locally (no Supabase) are stored here
@@ -190,8 +191,10 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
     return 'DN-' + String(max + Math.floor(Math.random() * 10) + 1).padStart(4, '0');
   };
 
-  const updateStatus = async ({ ticketId, status, actorName, detail, ticket: ticketArg, techName }: UpdateStatusInput) => {
-    const updateData: Partial<Ticket> & { status: TicketStatus } = { status };
+  const updateStatus = async ({ ticketId, status, actorName, detail, ticket: ticketArg, techName, assigned_tech_id }: UpdateStatusInput) => {
+    const updateData: Partial<Ticket> & { status: TicketStatus } = assigned_tech_id
+      ? { status, assigned_tech_id }
+      : { status };
 
     const actionMap: Record<TicketStatus, EventAction> = {
       new: 'open', progress: 'progress', done: 'done',
@@ -224,7 +227,7 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
 
     // Try Supabase (best-effort)
     try {
-      await supabase.from('tickets').update(updateData).eq('id', ticketId);
+      await supabase.from('tickets').update(updateData as Record<string, unknown>).eq('id', ticketId);
       await supabase.from('ticket_events').insert({
         ticket_id: ticketId,
         actor_name: actorName,

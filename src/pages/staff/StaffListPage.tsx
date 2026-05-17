@@ -8,7 +8,6 @@ import { CATEGORY_ICONS, Clock, User } from '../../components/ui/Icon';
 import { useTechnicians } from '../../hooks/useTechnicians';
 import { CATEGORY_COLOR, CATEGORY_LABEL } from '../../types';
 import type { TicketStatus, Ticket, Technician } from '../../types';
-import { supabase } from '../../lib/supabase';
 
 type KanbanCol = 'new' | 'progress' | 'done';
 
@@ -201,10 +200,12 @@ const StaffListPage: React.FC = () => {
     if (!assignTicket) return;
     setSaving(true);
     const techName = selectedTechId ? technicians.find(t => t.id === selectedTechId)?.name : undefined;
-    await updateStatus({ ticketId: assignTicket.id, status: 'progress', actorName: user?.name ?? 'เจ้าหน้าที่', ticket: assignTicket, techName });
-    if (selectedTechId) {
-      await supabase.from('tickets').update({ assigned_tech_id: selectedTechId }).eq('id', assignTicket.id);
-    }
+    await updateStatus({
+      ticketId: assignTicket.id, status: 'progress',
+      actorName: user?.name ?? 'เจ้าหน้าที่',
+      ticket: assignTicket, techName,
+      assigned_tech_id: selectedTechId || undefined,
+    });
     setSaving(false);
     setAssignTicket(null);
     refetch();
