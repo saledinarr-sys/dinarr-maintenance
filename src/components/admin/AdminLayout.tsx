@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ChartBar, List, Wrench, Settings } from '../ui/Icon';
 import Sidebar from './Sidebar';
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 export function useIsMobileAdmin() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -25,12 +26,23 @@ const AdminLayout: React.FC = () => {
   const isMobile = useIsMobileAdmin();
   const navigate = useNavigate();
   const location = useLocation();
+  const { dark, toggle } = useDarkMode();
 
   /* ── DESKTOP ── */
   if (!isMobile) {
     return (
       <div className="admin-layout dn">
-        <Sidebar />
+        <Sidebar darkToggle={
+          <button onClick={toggle} title={dark ? 'โหมดสว่าง' : 'โหมดมืด'}
+            style={{
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 'var(--r-pill)', cursor: 'pointer', padding: '6px 12px',
+              display: 'flex', alignItems: 'center', gap: 6, fontSize: 14,
+              color: 'var(--ink-2)', width: '100%', justifyContent: 'center',
+            }}>
+            {dark ? '☀️ โหมดสว่าง' : '🌙 โหมดมืด'}
+          </button>
+        } />
         <div style={{ flex: 1, overflowY: 'auto', minHeight: '100vh' }}>
           <Outlet />
         </div>

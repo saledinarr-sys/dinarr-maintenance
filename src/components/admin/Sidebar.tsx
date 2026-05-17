@@ -11,7 +11,7 @@ const NAV = [
   { path: '/admin/settings', icon: Settings, label: 'ตั้งค่า' },
 ];
 
-const Sidebar: React.FC = () => {
+const Sidebar: React.FC<{ darkToggle?: React.ReactNode }> = ({ darkToggle }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useApp();
@@ -70,6 +70,7 @@ const Sidebar: React.FC = () => {
             <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{getSettings().adminTitle || 'หัวหน้าฝ่าย'}</div>
           </div>
         </div>
+        {darkToggle && <div style={{ marginBottom: 8 }}>{darkToggle}</div>}
         <button onClick={() => { logout(); navigate('/'); }}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, width: '100%',

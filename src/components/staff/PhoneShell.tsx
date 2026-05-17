@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Logo, Home, List, Plus, User, Wrench, ChevronLeft, Bell, Settings } from '../ui/Icon';
+import { useDarkMode } from '../../hooks/useDarkMode';
+
+const DarkToggle: React.FC = () => {
+  const { dark, toggle } = useDarkMode();
+  return (
+    <button onClick={toggle} title={dark ? 'โหมดสว่าง' : 'โหมดมืด'}
+      style={{
+        background: 'var(--surface-2)', border: '1px solid var(--border)',
+        borderRadius: 'var(--r-pill)', cursor: 'pointer', padding: '5px 10px',
+        display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, lineHeight: 1,
+        color: 'var(--ink-2)', flexShrink: 0,
+      }}>
+      {dark ? '☀️' : '🌙'}
+    </button>
+  );
+};
 
 interface Tab {
   path: string;
@@ -129,6 +145,7 @@ const PhoneShell: React.FC<Props> = ({ title, showBack, showBell, rightAction, c
               </button>
             )}
             {rightAction}
+            <DarkToggle />
           </div>
 
           {/* Page content */}
@@ -166,6 +183,7 @@ const PhoneShell: React.FC<Props> = ({ title, showBack, showBell, rightAction, c
           </button>
         )}
         {rightAction}
+        <DarkToggle />
       </div>
 
       {/* Content */}
