@@ -7,6 +7,9 @@ export interface AppSettings {
   orgName: string;
   orgDept: string;
   sla: { low: number; mid: number; high: number; crit: number };
+  telegramBotToken: string;
+  telegramChatId: string;
+  telegramEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -16,6 +19,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   orgName: 'Dinarr',
   orgDept: 'ระบบแจ้งซ่อม',
   sla: { low: 24, mid: 8, high: 4, crit: 2 },
+  telegramBotToken: '',
+  telegramChatId: '',
+  telegramEnabled: false,
 };
 
 const STORAGE_KEY = 'dinarr-settings';

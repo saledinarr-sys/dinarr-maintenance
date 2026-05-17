@@ -64,6 +64,12 @@ const AdminSettingsPage: React.FC = () => {
   const [orgName, setOrgName] = useState(settings.orgName);
   const [orgDept, setOrgDept] = useState(settings.orgDept);
 
+  // Section E — Telegram
+  const [tgEnabled, setTgEnabled] = useState(settings.telegramEnabled);
+  const [tgToken, setTgToken] = useState(settings.telegramBotToken);
+  const [tgChatId, setTgChatId] = useState(settings.telegramChatId);
+  const [tgTesting, setTgTesting] = useState(false);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2200);
@@ -100,6 +106,33 @@ const AdminSettingsPage: React.FC = () => {
     if (!orgName.trim()) return;
     save({ orgName: orgName.trim(), orgDept: orgDept.trim() });
     showToast('บันทึกข้อมูลองค์กรแล้ว ✓');
+  };
+
+  const saveTelegram = () => {
+    save({ telegramEnabled: tgEnabled, telegramBotToken: tgToken.trim(), telegramChatId: tgChatId.trim() });
+    showToast('บันทึกการตั้งค่า Telegram แล้ว ✓');
+  };
+
+  const testTelegram = async () => {
+    if (!tgToken.trim() || !tgChatId.trim()) return;
+    setTgTesting(true);
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${tgToken.trim()}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: tgChatId.trim(),
+          text: `✅ <b>ทดสอบการเชื่อมต่อ Dinarr</b>\n\nการตั้งค่า Telegram สำเร็จแล้ว!\nแจ้งเตือนจะส่งมาที่นี่โดยอัตโนมัติ 🎉`,
+          parse_mode: 'HTML',
+        }),
+      });
+      const data = await res.json() as { ok: boolean };
+      if (data.ok) showToast('ส่งข้อความทดสอบสำเร็จ ✓');
+      else showToast('ส่งไม่สำเร็จ — ตรวจสอบ Token และ Chat ID');
+    } catch {
+      showToast('เกิดข้อผิดพลาด — ตรวจสอบ Token อีกครั้ง');
+    }
+    setTgTesting(false);
   };
 
   type SlaRow = {
@@ -201,6 +234,71 @@ const AdminSettingsPage: React.FC = () => {
     </SectionCard>
   );
 
+  const sectionE = (
+    <SectionCard title="Telegram แจ้งเตือน" subtitle="รับการแจ้งเตือนทุกขั้นตอนผ่าน Telegram Bot">
+      {/* Enable toggle */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
+        padding: '12px 14px', background: tgEnabled ? 'var(--brand-soft)' : 'var(--surface-2)',
+        borderRadius: 'var(--r-md)', border: `1.5px solid ${tgEnabled ? 'var(--brand)' : 'var(--border)'}`,
+        transition: 'all .15s',
+      }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: tgEnabled ? 'var(--brand-2)' : 'var(--ink-2)' }}>
+            {tgEnabled ? '🔔 เปิดการแจ้งเตือน' : '🔕 ปิดการแจ้งเตือน'}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 2 }}>
+            {tgEnabled ? 'จะส่งแจ้งเตือนทุกครั้งที่มีการเปลี่ยนสถานะ' : 'ไม่มีการส่งแจ้งเตือน'}
+          </div>
+        </div>
+        <button type="button" onClick={() => setTgEnabled(v => !v)}
+          style={{
+            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: tgEnabled ? 'var(--brand)' : 'var(--ink-5, #ccc)',
+            position: 'relative', flexShrink: 0, transition: 'background .2s',
+          }}>
+          <div style={{
+            width: 18, height: 18, borderRadius: '50%', background: '#fff',
+            position: 'absolute', top: 3, transition: 'left .2s',
+            left: tgEnabled ? 23 : 3,
+          }} />
+        </button>
+      </div>
+
+      <FieldGroup label="Bot Token">
+        <input className="input" type="password" value={tgToken}
+          onChange={e => setTgToken(e.target.value)}
+          placeholder="1234567890:AAF..." />
+      </FieldGroup>
+      <FieldGroup label="Chat ID">
+        <input className="input" value={tgChatId}
+          onChange={e => setTgChatId(e.target.value)}
+          placeholder="-100123456789 หรือ @username" />
+      </FieldGroup>
+
+      {/* How-to hint */}
+      <div style={{ fontSize: 11.5, color: 'var(--ink-4)', background: 'var(--surface-2)',
+        padding: '10px 12px', borderRadius: 'var(--r-md)', marginBottom: 14, lineHeight: 1.6 }}>
+        📌 วิธีสร้าง Bot: เปิด Telegram → ค้นหา <b>@BotFather</b> → พิมพ์ <code>/newbot</code> → คัดลอก Token<br />
+        📌 วิธีหา Chat ID: ส่งข้อความหา bot → เปิด
+        {' '}<code style={{ wordBreak: 'break-all' }}>api.telegram.org/bot{'<TOKEN>'}/getUpdates</code>
+        {' '}→ คัดลอก <code>chat.id</code>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn" style={{ flex: 1, height: 42, fontSize: 13, fontWeight: 600,
+          background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--ink-2)' }}
+          onClick={testTelegram}
+          disabled={!tgToken.trim() || !tgChatId.trim() || tgTesting}>
+          {tgTesting ? 'กำลังส่ง...' : '🔔 ทดสอบส่ง'}
+        </button>
+        <button className="btn btn-primary" style={{ flex: 2, height: 42, fontSize: 13, fontWeight: 600 }}
+          onClick={saveTelegram}>
+          บันทึก
+        </button>
+      </div>
+    </SectionCard>
+  );
+
   /* ── Toast ── */
   const toastEl = toast ? (
     <div style={{
@@ -230,6 +328,7 @@ const AdminSettingsPage: React.FC = () => {
           {sectionB}
           {sectionC}
           {sectionD}
+          {sectionE}
         </div>
       </div>
     );
@@ -247,6 +346,7 @@ const AdminSettingsPage: React.FC = () => {
         <div>{sectionA}{sectionB}</div>
         <div>{sectionC}{sectionD}</div>
       </div>
+      <div style={{ maxWidth: 900, marginTop: 0 }}>{sectionE}</div>
     </div>
   );
 };

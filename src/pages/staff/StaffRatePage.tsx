@@ -5,6 +5,7 @@ import { StarFill, Star } from '../../components/ui/Icon';
 import { useTicket, useTickets } from '../../hooks/useTickets';
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
+import { sendTelegramMessage, buildRatingMsg } from '../../lib/telegram';
 
 const TAGS = ['รวดเร็ว', 'สุภาพ', 'ทำความสะอาด', 'ซ่อมดี', 'สื่อสารดี'];
 
@@ -36,6 +37,7 @@ const StaffRatePage: React.FC = () => {
       action_type: 'rate',
       detail: `ให้คะแนน ${score}/5`,
     });
+    if (ticket) sendTelegramMessage(buildRatingMsg(ticket, score, comment.trim()));
     navigate(`/staff/ticket/${id}`);
   };
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { sendTelegramMessage, buildTicketOpenMsg, buildStatusUpdateMsg } from '../lib/telegram';
 import type { Ticket, TicketStatus, EventAction } from '../types';
 
 interface CreateTicketInput {
@@ -168,6 +169,7 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
           action_type: 'open' as EventAction,
           detail: 'เปิดคำขอแจ้งซ่อม',
         });
+        sendTelegramMessage(buildTicketOpenMsg(data as Ticket));
         setTickets(prev => [data as Ticket, ...prev]);
         return data as Ticket;
       }
@@ -175,6 +177,7 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
 
     // Local fallback: add to state + cache
     localTicketCache.set(newTicket.id, newTicket);
+    sendTelegramMessage(buildTicketOpenMsg(newTicket));
     setTickets(prev => [newTicket, ...prev]);
     return newTicket;
   };
@@ -193,12 +196,19 @@ export function useTickets(filters?: { assigned_tech_id?: string; reporter_name?
     };
 
     // Update local state + cache immediately
+    let updatedTicket: Ticket | null = null;
     setTickets(prev => prev.map(t => {
       if (t.id !== ticketId) return t;
       const updated = { ...t, ...updateData };
       localTicketCache.set(ticketId, updated);
+      updatedTicket = updated;
       return updated;
     }));
+
+    // Send Telegram notification
+    if (updatedTicket) {
+      sendTelegramMessage(buildStatusUpdateMsg(updatedTicket, actorName, detail));
+    }
 
     // Try Supabase (best-effort)
     try {

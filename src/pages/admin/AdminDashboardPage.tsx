@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useTickets } from '../../hooks/useTickets';
 import { useTechnicians } from '../../hooks/useTechnicians';
+import { sendTelegramMessage, buildPendingSummaryMsg } from '../../lib/telegram';
+import { getSettings } from '../../hooks/useSettings';
 import { Bell, Plus, Trend, Activity } from '../../components/ui/Icon';
 import StatusPill from '../../components/ui/StatusPill';
 import PriorityChip from '../../components/ui/PriorityChip';
@@ -25,6 +27,16 @@ const AdminDashboardPage: React.FC = () => {
   const isMobile = useIsMobileAdmin();
   const { tickets, loading } = useTickets();
   const { technicians } = useTechnicians();
+  const [sending, setSending] = useState(false);
+
+  const sendSummary = async () => {
+    if (sending) return;
+    setSending(true);
+    const pending = tickets.filter(t => t.status !== 'done');
+    await sendTelegramMessage(buildPendingSummaryMsg(pending));
+    setSending(false);
+  };
+  const tgEnabled = getSettings().telegramEnabled;
 
   const today = new Date();
   const todayCount = tickets.filter(t => new Date(t.created_at).toDateString() === today.toDateString()).length;
@@ -63,10 +75,20 @@ const AdminDashboardPage: React.FC = () => {
           title="Dashboard"
           subtitle={today.toLocaleDateString('th-TH', { weekday: 'long', month: 'long', day: 'numeric' })}
           action={
-            <button className="btn btn-primary" onClick={() => navigate('/admin/new')}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 14px', fontSize: 13, borderRadius: 'var(--r-md)' }}>
-              <Plus size={14} stroke="#fff" />แจ้งซ่อม
-            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {tgEnabled && (
+                <button onClick={sendSummary} disabled={sending}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 10px', fontSize: 12, fontWeight: 600,
+                    borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)',
+                    color: 'var(--ink-2)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  📋{sending ? '...' : ''}
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={() => navigate('/admin/new')}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 14px', fontSize: 13, borderRadius: 'var(--r-md)' }}>
+                <Plus size={14} stroke="#fff" />แจ้งซ่อม
+              </button>
+            </div>
           }
         />
 
@@ -202,10 +224,20 @@ const AdminDashboardPage: React.FC = () => {
             {today.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/admin/new')}
-          style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Plus size={16} stroke="#fff" />แจ้งซ่อมใหม่
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {tgEnabled && (
+            <button onClick={sendSummary} disabled={sending}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', fontSize: 13, fontWeight: 600,
+                borderRadius: 'var(--r-md)', background: 'var(--surface)', border: '1px solid var(--border)',
+                color: 'var(--ink-2)', cursor: 'pointer', fontFamily: 'inherit' }}>
+              📋 {sending ? 'กำลังส่ง...' : 'ส่งสรุปงานตอนนี้'}
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={() => navigate('/admin/new')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Plus size={16} stroke="#fff" />แจ้งซ่อมใหม่
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
